@@ -59,8 +59,30 @@ class UIGenAgent:
                 thread_id=thread_id,
                 role="user",
                 content=f"""Act as a requirements analyst. 
-                Do you have enough information to generate component code based on the following prompt: {user_prompt}
-                Answer with yes or no only.
+                Given the following user request: "{user_prompt}"
+                1. Determine if there is enough detail to generate working component code (e.g., styles, colors, labels, layout specifics).
+                2. If YES, respond only with "yes".
+                3. If NO, respond only with "no".
+
+                Your decision should be based on whether the user has provided enough design-specific information (like color scheme, data structure, size, layout, etc.) to create a visually complete and functional component.
+                Examples:
+                User Prompt: "Create a button"
+                Assistant: no
+
+                User Prompt: "Build a blue-themed submit button with rounded corners that says 'Save'"
+                Assistant: yes
+
+                User Prompt: "Make a chart"
+                Assistant: no
+
+                User Prompt: "Build a donut chart showing task completion at 80%. Use pink and white as primary colors."
+                Assistant: yes
+
+                User Prompt: "Create a dashboard widget for analytics"
+                Assistant: no
+
+                User Prompt: "Create a card component showing a user's profile picture, name, and email, with a light gray background."
+                Assistant: yes
                 """,
             )
             print(f"Created initial message, ID: {message.id}")
@@ -86,28 +108,150 @@ class UIGenAgent:
             print(last_msg)
             if last_msg:
                 if "yes" in last_msg.text["value"].lower():
-                    print("Agent confirmed enough information to generate code.")
-                    # Proceed with code generation
-                    result = self.run_agent(user_prompt)
-                    print(result)
+                    return{
+                        "status":"success",
+                        "message":"Agent indicated enough information.",
+                        "thread_id":thread_id,
+                        "user_prompt":user_prompt}
+
                 else:
                     print("Agent indicated not enough information.")
+                    return {
+                        "status":"needs_more_info",
+                        "message":"Agent indicated not enough information.",
+                        "prompt":user_prompt, 
+                        "thread_id":thread_id,
+                        "user_prompt":user_prompt
+                    }
             else:
                 print("No response from agent.")
         except Exception as e:
             logger.error(f"Error starting conversation: {e}")
+    def continue_conversation(self, thread_id:str, user_prompt:str):
+        """
+        Continue the conversation with the agent
+        :param thread_id: The ID of the thread to continue the conversation
+        :param user_prompt: The prompt to continue the conversation
+        """
+        try:
+            message=self.project_client.agents.create_message(
+                thread_id=thread_id,
+                role="user",
+                content=f"""Act as a requirements analyst. 
+                Given the following user request: "{user_prompt}"
+                1. Determine if there is enough detail to generate working component code (e.g., styles, colors, labels, layout specifics).
+                2. If YES, respond only with "yes".
+                3. If NO, respond only with "no".
 
+                Your decision should be based on whether the user has provided enough design-specific information (like color scheme, data structure, size, layout, etc.) to create a visually complete and functional component.
+                Examples:
+                User Prompt: "Create a button"
+                Assistant: no
 
+                User Prompt: "Build a blue-themed submit button with rounded corners that says 'Save'"
+                Assistant: yes
 
-    def run_agent(self, user_prompt:str):
+                User Prompt: "Make a chart"
+                Assistant: no
+
+                User Prompt: "Build a donut chart showing task completion at 80%. Use pink and white as primary colors."
+                Assistant: yes
+
+                User Prompt: "Create a dashboard widget for analytics"
+                Assistant: no
+
+                User Prompt: "Create a card component showing a user's profile picture, name, and email, with a light gray background."
+                Assistant: yes
+                """
+            )
+            print(f"Created follow-up message, ID: {message.id}")
+            run=self.project_client.agents.create_run(
+                thread_id=thread_id,
+                agent_id=self.ui_agent_id
+            )
+            run_id=run.id
+            print(f"Created follow-up run, ID: {run_id}")
+            # Wait for completion
+            while run.status in ["queued", "in_progress"]:
+                time.sleep(1)
+                run = self.project_client.agents.get_run(
+                    thread_id=thread_id, 
+                    run_id=run_id
+                )
+                print(f"Follow-up run status: {run.status}")
+            messages=self.project_client.agents.list_messages(thread_id=thread_id, run_id=run_id)
+            last_msg = messages.get_last_text_message_by_role("assistant")
+            if last_msg:
+                if "yes" in last_msg.text["value"].lower():
+                    return{
+                        "status":"success",
+                        "message":"Agent indicated enough information.",
+                        "thread_id":thread_id,
+                        "user_prompt":user_prompt}
+
+                else:
+                    print("Agent indicated not enough information.")
+                    return {
+                        "status":"needs_more_info",
+                        "message":"Agent indicated not enough information.",
+                        "prompt":user_prompt, 
+                        "thread_id":thread_id,
+                        "user_prompt":user_prompt
+                    }
+            else:
+                print("No response from agent.")
+        except Exception as e:
+            logger.error(f"Error continuing conversation: {e}")
+            
+        
+    def provide_additional_info(self, thread_id, user_prompt):
+        """
+        Provide additional information to the agent
+        """
+        try:
+            message=self.project_client.agents.create_message(
+                thread_id=thread_id,
+                role="user",
+                content=f"""
+Act as a UI designer. Ask a series of follow up questions to gather more information about the request to generate the following component: "{user_prompt}"
+1. Ask about the specific design elements needed (e.g., colors, styles, layout).
+2. Inquire about the functionality and behavior of the component (e.g., click handlers, data binding).
+3. Clarify the context in which the component will be used (e.g., part of a larger application, standalone).
+"""
+            )
+            print(f"Created follow-up message, ID: {message.id}")
+            run=self.project_client.agents.create_run(
+                thread_id=thread_id,
+                agent_id=self.ui_agent_id
+            )
+            run_id=run.id
+            print(f"Created follow-up run, ID: {run_id}")
+            # Wait for completion
+            while run.status in ["queued", "in_progress"]:
+                time.sleep(1)
+                run = self.project_client.agents.get_run(
+                    thread_id=thread_id, 
+                    run_id=run_id
+                )
+                print(f"Follow-up run status: {run.status}")
+            agent_response = self.project_client.agents.list_messages(thread_id=thread_id, run_id=run_id)
+            last_msg = agent_response.get_last_text_message_by_role("assistant")
+            print(last_msg)
+            if last_msg:
+                return {
+                    "message":last_msg.text["value"],
+                    "thread_id":thread_id,
+                }
+        except Exception as e:
+            logger.error(f"Error providing additional information: {e}")
+
+    def generate_component(self, thread_id:str, user_prompt:str):
             max_retries = 3
             retry_delay = 30  # seconds
             
             for attempt in range(max_retries):
                 try:
-                    thread = self.project_client.agents.create_thread()  # Create a NEW thread
-                    thread_id = thread.id
-                    message = project_client.agents.create_message(
+                    message = self.project_client.agents.create_message(
                         thread_id=thread_id,
                         role="user",
                         content=f"""Please generate a Material UI component based on the following prompt: {user_prompt}""",
@@ -184,15 +328,58 @@ class UIGenAgent:
                                 "error": str(e),
                                 "structured_data": None
                             }
-
             return {
                 "success": False,
                 "error": "Max retries exceeded",
                 "structured_data": None
             }
+    def run_agent(self, user_prompt:str):
+        """
+        Run the agent with the provided user prompt
+        :param user_prompt: The prompt to run the agent with
+        """
+        # Start conversation
+        response = self.start_conversation(user_prompt)
+        if response["status"] == "needs_more_info":
+            # Provide additional information
+            additional_info = self.provide_additional_info(response["thread_id"], user_prompt)
+            print("\n"+additional_info["message"])
+            conversation_history=user_prompt
+            while True:
+                user_input=input("Your response (type 'generate' to generate the component) >")
+                if user_input.lower() == "generate":
+                    break
+                conversation_history+=" "+ user_input
+                print("Current conversation history: ", conversation_history)
+                response = self.continue_conversation(response["thread_id"], conversation_history)
+                if response["status"] == "needs_more_info":
+                    additional_info = self.provide_additional_info(response["thread_id"], conversation_history)
+                    print("\n"+additional_info["message"])
+                elif response["status"] == "success":
+                    print("Agent indicated enough information.")
+                    break
+            component_response = self.generate_component(response["thread_id"], conversation_history)
+            print(component_response)
+            return component_response
+        elif response["status"] == "success":
+            component_response = self.generate_component(response["thread_id"], user_prompt)
+            print(component_response)
+            return component_response
+        
+        else:
+            print("Error in conversation setup.")
 
+if __name__ == "__main__":
+    print("Starting UI Generation Agent...")
+    agent = UIGenAgent()
+    agent.setup_agent()
+    while True:
+        user_prompt = input("Describe your UI component (or type 'exit'/'quit' to quit): ")
+        if user_prompt.lower() == "exit":
+            break
+        response = agent.run_agent(user_prompt)
+        if response["success"]:
+            print("Component generated successfully.")
+            print("Generated Component:", response["structured_data"])
+            
 
-
-agent=UIGenAgent()
-agent.setup_agent()
-agent.start_conversation("Create a Material UI button with a click handler that shows an alert.")
