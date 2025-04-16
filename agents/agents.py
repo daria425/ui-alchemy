@@ -393,7 +393,7 @@ Act as a UI designer. Ask a series of follow up questions to gather more informa
                     {component}
                     Based on the following feedback: {user_prompt}""",
                 )
-                print(f"Created message, ID: {message.id}")
+                print(f"Created message, ID: {message.id}", f"Message content:{message.content}")
 
                 run = self.project_client.agents.create_run(
                     thread_id=thread_id, agent_id=self.ui_agent_id
@@ -459,12 +459,14 @@ Act as a UI designer. Ask a series of follow up questions to gather more informa
                             "success": False,
                             "error": run.last_error,
                             "structured_data": None,
+                            "thread_id": thread_id,
                         }
                 print(f"Run completed with status: {run.status}")
                 if tool_outputs_results:
                     return {
                         "success": True,
                         "structured_data": tool_outputs_results[0]["output"],
+                        "thread_id": thread_id,
                     }  # Return first tool output
             except Exception as e:
                 if "rate_limit" in str(e).lower():
@@ -480,11 +482,13 @@ Act as a UI designer. Ask a series of follow up questions to gather more informa
                             "success": False,
                             "error": str(e),
                             "structured_data": None,
+                            "thread_id": thread_id,
                         }
         return {
             "success": False,
             "error": "Max retries exceeded",
             "structured_data": None,
+            "thread_id":thread_id
         }
 
     def run_agent(self, user_prompt: str):
