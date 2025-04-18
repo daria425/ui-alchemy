@@ -1,6 +1,6 @@
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from typing import TypedDict, List
+from typing import TypedDict, List, Annotated, Union
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END, START
 from langchain_core.tools import tool
@@ -41,12 +41,22 @@ def ui_gen_function(install_script: str, imports: str, code: str, description: s
     }
 
 
+def manage_conversation_history(existing:list, updates: Union[list, dict]):
+    if isinstance(updates, list):
+        # If updates is a list, append it to the existing conversation history
+        return existing + updates
+    elif isinstance(updates, dict) and updates.get("action"):
+        keep_count=3 # number of previous exchanges to keep, hardcoded for now
+        if len(existing)<= keep_count:
+            return existing
+        return existing[-keep_count:]
+    return existing
 
 
 class State(TypedDict):
     component_request:str
     llm_response:str
-    conversation_history:List[str]
+    conversation_history:Annotated[List, manage_conversation_history] # whenever a node returns an update for this field, instead of directly replacing its value, call the manage_conversation_history function to determine how to merge the old state with the update
     user_input:str
     component_data:dict[str, str]
     force_generate:bool
