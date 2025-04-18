@@ -48,6 +48,7 @@ class State(TypedDict):
     llm_response:str
     conversation_history:List[str]
     user_input:str
+    component_data:dict[str, str]
     force_generate:bool
 
 def understand_requirements(state: State):
@@ -108,7 +109,20 @@ def generate_code(state:State):
     response=llm_with_tools.invoke(messages)
     tool_calls=response.tool_calls
     if tool_calls:
-        print(tool_calls)
+        # Extract the tool call data
+        tool_call = next((call for call in tool_calls if call['name'] == "ui_gen_function"), None)
+        install_script = tool_call['args']["install_script"]
+        imports = tool_call['args']["imports"]
+        code = tool_call['args']["code"]
+        description = tool_call['args']["description"]
+        return {
+            "component_data": {
+                "install_script": install_script,
+                "imports": imports,
+                "code": code,
+                "description": description,
+            },
+        }
 
 
 
@@ -155,7 +169,13 @@ Act as a UI designer. Ask a series of follow up questions to gather more informa
 
     
 def get_final_response(state:State):
-    print("State in final response", state)
+    print("State in get_final_response", state)
+    component_result=state.get("component_data", {})
+    if component_result:
+        output="\n".join(component_result.values())
+        print("\n--- Generated Component ---")
+        print(output)
+    
 
 def route_message(state: State):
     """
