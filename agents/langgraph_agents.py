@@ -1,12 +1,17 @@
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from typing import Dict, TypedDict, Annotated, List
+from typing import TypedDict, List
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END, START
 from langchain_core.tools import tool
 from langchain_openai import AzureChatOpenAI
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage,SystemMessage
 from utils.graph_utils import display_graph
+from utils.file_utils import load_file
+
+instruction_file_path = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "agent_instructions.txt"
+)
 
 load_dotenv()
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
@@ -46,6 +51,7 @@ class State(TypedDict):
     force_generate:bool
 
 def understand_requirements(state: State):
+    system_prompt=load_file(instruction_file_path)
     prompt=f"""Act as a requirements analyst. 
                     Given the following user request: "{state['component_request']}"
                     1. Determine if there is enough detail to generate working component code (e.g., styles, colors, labels, layout specifics).
@@ -72,7 +78,7 @@ def understand_requirements(state: State):
                     User Prompt: "Create a card component showing a user's profile picture, name, and email, with a light gray background."
                     Assistant: yes
                     """
-    messages=[HumanMessage(content=prompt)]
+    messages=[SystemMessage(content=system_prompt),HumanMessage(content=prompt)]
     response=llm.invoke(messages)
     return {
         "llm_response": response.content,
@@ -80,7 +86,34 @@ def understand_requirements(state: State):
 
 
 def generate_code(state:State):
+    """Generate the MUI code for the component"""
     print("State in generate code", state)
+    system_prompt=load_file(instruction_file_path)
+    context="\nContext from follow up questions:\n"
+    for exchange in state["conversation_history"]:
+        if isinstance(exchange, list) and len(exchange) == 2:
+            ai_msg, human_msg= exchange
+            context += f"Question: {ai_msg.content}\nAnswer: {human_msg.content}\n\n"
+    user_prompt = f"""Generate a Material UI component based on this description:
+    "{state['component_request']}"
+    {context}
+    Create high-quality, production-ready code that matches all specifications.
+    Use the ui_gen_function tool to return the structured data.
+    """
+    messages=[
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=user_prompt)
+    ]
+    llm_with_tools=llm.bind_tools([ui_gen_function], tool_choice="required")
+    response=llm_with_tools.invoke(messages)
+    tool_calls=response.tool_calls
+    if tool_calls:
+        print(tool_calls)
+
+
+
+
+
 
 def ask_for_clarification(state:State):
     """
@@ -89,6 +122,7 @@ def ask_for_clarification(state:State):
     # Get current component request
     component_request = state.get("component_request", "")
     # Generate follow-up questions using the LLM
+    system_prompt=load_file(instruction_file_path)
     prompt=f"""
 Act as a UI designer. Ask a series of follow up questions to gather more information about the request to generate the following component: "{component_request}"
 1. Ask about the specific design elements needed (e.g., colors, styles, layout).
@@ -96,13 +130,12 @@ Act as a UI designer. Ask a series of follow up questions to gather more informa
 3. Clarify the context in which the component will be used (e.g., part of a larger application, standalone).
 4. Be conscise. No yapping.
 """
-    messages=[HumanMessage(content=prompt)]
+    messages=[SystemMessage(content=system_prompt),HumanMessage(content=prompt)]
     response=llm.invoke(messages)
     clarification_questions=response.content
     print("\n--- UI Alchemy Needs More Information ---")
     print(clarification_questions)
-    
-    # Now we need to pause and get user input
+
     user_input = input("\nYour response (or type 'generate' to proceed anyway): ")
     conversation_history = state.get("conversation_history", [])
     conversation_history.append([AIMessage(content=clarification_questions), HumanMessage(content=user_input)])
