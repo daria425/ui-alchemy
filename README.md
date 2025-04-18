@@ -1,10 +1,16 @@
 # UI-Alchemy
 
-A WIP of a tool for generating Material UI React components using Azure AI Services.
-
 ### Overview
 
-UI-Alchemy is a Python application that leverages Azure AI Projects to generate customized React components using Material UI. It creates an interactive (CLI based, for now :) ) dialog with the user to gather requirements and then produces fully functional UI components.
+UI-Alchemy is a Python-based application designed to generate customizable React components using Material UI. It interacts with users through a CLI to collect UI requirements and outputs fully functional, production-ready components.
+
+### Current Focus
+
+This project is in an experimental phase. I'm currently exploring:
+
+- Azure AI Agent Service for orchestrating component generation workflows.
+
+- LangGraph as an alternative approach to managing multi-step AI agent logic.
 
 ### Structure:
 
@@ -45,3 +51,7 @@ flowchart TD
     M --> P[Display Component]
     P --> C
 ```
+
+### Langgraph Graph (so far):
+
+<img src='./graph.png'>
