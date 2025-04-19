@@ -122,6 +122,7 @@ def prune_conversation_history(state: State):
 
 
 def understand_requirements(state: State):
+    print("Understanding requirements...")
     system_prompt = load_file(instruction_file_path)
     prompt = f"""Act as a requirements analyst. 
                     Given the following user request: "{state['component_request']}"
@@ -159,6 +160,7 @@ def understand_requirements(state: State):
 
 def generate_code(state: State):
     """Generate the MUI code for the component"""
+    print("Generating code...")
     system_prompt = load_file(instruction_file_path)    
     context = "\nContext from follow up questions:\n"
     for exchange in state["conversation_history"]:
@@ -214,6 +216,7 @@ Fix the code to address these issues and ensure it meets the user's request:
     
 
 def validate_code(state:State):
+    print("Validating code...")
     component_data= state.get("component_data", {})
     validation_attempts= state.get("validation_attempts", 0)
     system_prompt=f"""
@@ -249,6 +252,7 @@ def ask_for_clarification(state: State):
     Generate clarifying questions and wait for user input
     """
     # Get current component request
+    print("Clarification required!")
     component_request = state.get("component_request", "")
     # Generate follow-up questions using the LLM
     system_prompt = load_file(instruction_file_path)
@@ -271,6 +275,7 @@ def handle_validation_error(state: State):
     """
     Prevent infinite loops by limiting the number of validation attempts and returning the response after 3 attemps
     """
+    print("Validation failed after 3 attempts.")
     return {
         "status":"validation_failure"
     }
@@ -289,12 +294,11 @@ def route_message(state: State):
     """
     Route the message to the appropriate function based on the state
     """
-    if state.get("status") == "awaiting_user_input":
-        return END
     if state.get("force_generate", False):
         print("Force generate is TRUE - routing to generate_code")
         return "generate_code"
     if "yes" in state["llm_response"].lower():
+        print("Requirements understood - routing to generate_code")
         return "generate_code"
     else:
         return "ask_for_clarification"
@@ -341,8 +345,7 @@ builder.add_conditional_edges(
     route_message,
     {
         "generate_code": "prune_conversation_history",
-        "ask_for_clarification": "understand_requirements",
-        END:END
+        "ask_for_clarification": END
     },
 )
 builder.add_conditional_edges(
