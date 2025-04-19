@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uuid
 from pydantic import BaseModel, Field
 from typing import Dict, Optional
-from agents.langgraph_api import graph
+from agents.langgraph_api import graph, checkpointer, process_user_input
 app = FastAPI()
 
 # Enable CORS
@@ -49,12 +49,33 @@ def create_new_session(request:ComponentRequest):
     result=graph.invoke(initial_state, config)
     print(result)
     return ComponentResponse(
-        session_id=session_id,
+        session_id=session_id, # returned to client, used in next request
         status=result["status"],
         message=result["ai_message"],
 
     )
 
+
+@app.post("/ui-alchemy/api/sessions/messages", response_model=ComponentResponse)
+def add_message(session_id:str, message:UserMessage):
+    """
+    Continue an existing session with an additional message
+    """
+    config={"configurable":{"thread_id":session_id}}
+    if not checkpointer.get(config):
+        raise HTTPException(status_code=404, detail="Session not found")
+    saved_config=checkpointer.get(config)
+    current_state=saved_config["channel_values"]
+    updated_state=process_user_input(current_state, message.message)
+    result=graph.invoke(updated_state, config)
+    print(result)
+    return ComponentResponse(
+        session_id=session_id, # returned to client, used in next request
+        status=result["status"],
+        message=result["ai_message"],
+     
+        component_data=result.get("component_data", None)
+    )
 
 
 
