@@ -1,57 +1,58 @@
 # UI-Alchemy
 
-### Overview
+## Overview
 
-UI-Alchemy is a Python-based application designed to generate customizable React components using Material UI. It interacts with users through a CLI to collect UI requirements and outputs fully functional, production-ready components.
+WIP: UI-Alchemy is a Python-based API tool designed to generate customizable React components using Material UI.
 
-### Current Focus
+## Architecture
 
-This project is in an experimental phase. I'm currently exploring:
+This project uses LangGraph to orchestrate component generation and FastAPI to expose this as an API.
 
-- Azure AI Agent Service for orchestrating component generation workflows.
+**Features so far**
 
-- LangGraph as an alternative approach to managing multi-step AI agent logic.
+- Conversational component generation
+- Follow-up questions for clarification
+- Validation of generated code
+- Session-based API for persistent component generation
 
-### Structure:
+## Project Structure
 
-- [agents](./agents/): Contains the UI generation agent code and instructions
-- [config](./config/) Configuration for Azure AI services
-- [utils](./config/): Utility functions for file handling and logging
+- `/app`: Main application code
+  - `/agent`: Contains the LangGraph workflow and state management
+    - `ui_alchemy.py`: Core LangGraph workflow
+    - `state.py`: State definitions and management
+    - `tools.py`: Tool implementations for component generation
+    - `config.py`: Configuration settings
+  - `/utils`: Utility functions for file handling and logging
+- `/main.py`: Application entry point
 
-### Azure AI Conversation Flow:
+## API Endpoints
+
+| Endpoint                                         | Method | Description                                  |
+| ------------------------------------------------ | ------ | -------------------------------------------- |
+| `/ui-alchemy/api/sessions`                       | POST   | Create a new component generation session    |
+| `/ui-alchemy/api/sessions/{session_id}/messages` | POST   | Continue an existing session with user input |
+
+## Component Generation Flow
 
 ```mermaid
 flowchart TD
-    A[Start] --> B[Initialize Agent]
-    B --> C{Have Component?}
+    A[Start] --> B[Initialize Session]
+    B --> C[Understand Requirements]
+    C --> D{Enough Information?}
 
-    C -- No --> F[Get User Prompt]
-    C -- Yes --> D{Menu Choice}
+    D -- No --> E[Generate Clarification Questions]
+    E --> F[Return Questions to User]
+    F --> G[Wait for User Response]
+    G --> H[Process User Input]
+    H --> C
 
-    D -- "New Component" --> F
-    D -- "Edit Component" --> E[Get Edit Feedback]
-    D -- "Exit" --> Z[End]
+    D -- Yes --> I[Generate Component Code]
+    I --> J[Validate Component]
+    J --> K{Valid Component?}
 
-    E --> EA[Edit Component]
-    EA --> C
+    K -- No --> L[Fix Validation Issues]
+    L --> J
 
-    F --> G[Run Agent]
-
-    G --> H{Enough Information?}
-
-    H -- No --> I[Get Follow-up Questions]
-    H -- Yes --> M[Generate Component]
-
-    I --> J[Get User Input]
-    J -- More Input --> K[Update History]
-    J -- Generate --> M
-
-    K --> H
-
-    M --> P[Display Component]
-    P --> C
+    K -- Yes --> M[Return Completed Component]
 ```
-
-### LangGraph Graph (so far):
-
-<img src='./graph.png'>
