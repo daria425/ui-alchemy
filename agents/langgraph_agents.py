@@ -65,6 +65,7 @@ class State(TypedDict):
     user_input: str
     component_data: dict[str, str]
     force_generate: bool
+    validation_feedback:str
 
 
 def prune_conversation_history(state: State):
@@ -119,22 +120,41 @@ def understand_requirements(state: State):
     }
 
 
+
 def generate_code(state: State):
     """Generate the MUI code for the component"""
-    print("State in generate code", state)
-    system_prompt = load_file(instruction_file_path)
+    system_prompt = load_file(instruction_file_path)    
     context = "\nContext from follow up questions:\n"
     for exchange in state["conversation_history"]:
         if isinstance(exchange, list) and len(exchange) == 2:
             ai_msg, human_msg = exchange
             context += f"Question: {ai_msg.content}\nAnswer: {human_msg.content}\n\n"
-    user_prompt = f"""Generate a Material UI component based on this description:
-    "{state['component_request']}"
-    {context}
-    Create high-quality, production-ready code that matches all specifications.
-    Use the ui_gen_function tool to return the structured data.
-    """
-    messages = [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)]
+    if state.get("validation_feedback"):
+        system_prompt=f"""
+This component has recieved the following feedback from a code reviewer:
+## FEEDBACK ##
+{state['validation_feedback']}
+## END FEEDBACK ##
+## COMPONENT ##
+Install script:
+{state['component_data']['install_script']}
+Component:
+{state['component_data']['imports']}
+{state['component_data']['code']}
+## END COMPONENT ##
+Fix the code to address these issues and ensure it meets the user's request:
+{state['component_request']}.
+"""
+        messages=[
+        SystemMessage(content=system_prompt)]
+    else:
+        user_prompt = f"""Generate a Material UI component based on this description:
+            "{state['component_request']}"
+            {context}
+            Create high-quality, production-ready code that matches all specifications.
+            Use the ui_gen_function tool to return the structured data.
+            """
+        messages = [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)]
     llm_with_tools = llm.bind_tools([ui_gen_function], tool_choice="required")
     response = llm_with_tools.invoke(messages)
     tool_calls = response.tool_calls
@@ -155,6 +175,34 @@ def generate_code(state: State):
                 "description": description,
             },
         }
+    
+
+def validate_code(state:State):
+    component_data= state.get("component_data", {})
+    system_prompt=f"""
+Act as a code reviewer skilled in Frontend development. Your task is to review the following code:
+## INSTALL SCRIPT ##
+{component_data.get('install_script', '')}
+
+## IMPORTS ##
+{component_data.get('imports', '')}
+
+## CODE ##
+{component_data.get('code', '')}
+Ensure that:
+1. It is syntactically correct and adheres to best practices.
+2. It is well-structured and easy to read.
+3.It includes a default export called MUI Component.
+4. The component within the code is fully self contained, can be rendered alone and does not rely on any external variables or data.
+5. The component fits the following request: {state['component_request']}
+If the code meets all the above criteria, respond with "yes" only. 
+If it does not, respond with "no" and provide a brief explanation of the issues, clearly explaining how to fix."""
+    messages=[SystemMessage(content=system_prompt)]
+    print("--- Code Review In Progress ---")
+    response=llm.invoke(messages)
+    return {
+        "validation_feedback": response.content,
+    }
 
 
 def ask_for_clarification(state: State):
@@ -198,7 +246,6 @@ Act as a UI designer. Ask a series of follow up questions to gather more informa
 
 
 def get_final_response(state: State):
-    print("State in get_final_response", state)
     component_result = state.get("component_data", {})
     if component_result:
         output = "\n".join(component_result.values())
@@ -210,7 +257,6 @@ def route_message(state: State):
     """
     Route the message to the appropriate function based on the state
     """
-    print("Current state in route_message:", state)
     if state.get("force_generate", False):
         print("Force generate is TRUE - routing to generate_code")
         return "generate_code"
@@ -218,6 +264,17 @@ def route_message(state: State):
         return "generate_code"
     else:
         return "ask_for_clarification"
+    
+def route_validation(state:State):
+    """
+    Route the message to the appropriate function based on the state
+    """
+    if "yes" in state["validation_feedback"].lower():
+        print("Code Review passed, routing to get_final_response")
+        return "get_final_response"
+    else:
+        print("Code Review failed, routing to generate_code")
+        return "generate_code"
 
 
 builder = StateGraph(State)
@@ -226,6 +283,7 @@ builder.add_node("generate_code", generate_code)
 builder.add_node("get_final_response", get_final_response)
 builder.add_node("ask_for_clarification", ask_for_clarification)
 builder.add_node("prune_conversation_history", prune_conversation_history)
+builder.add_node("validate_code", validate_code)
 
 
 builder.add_edge(START, "understand_requirements")
@@ -247,11 +305,16 @@ builder.add_conditional_edges(
         "ask_for_clarification": "understand_requirements",
     },
 )
+builder.add_conditional_edges(
+    "validate_code", route_validation, {
+        "get_final_response": "get_final_response",
+        "generate_code":"generate_code",
+    }
+)
+builder.add_edge("generate_code", "validate_code")
 builder.add_edge("prune_conversation_history", "generate_code")
-
-builder.add_edge("generate_code", "get_final_response")
 graph = builder.compile()
-display_graph(graph, "graph.png")
+# display_graph(graph, "graph.png")
 
 
 # Example of running the graph
@@ -265,6 +328,7 @@ def run_ui_alchemy():
         "conversation_history": [],
         "user_input": "",
         "force_generate": False,
+        "validation_feedback": "",
     }
 
     # Run the graph
