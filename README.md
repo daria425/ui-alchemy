@@ -18,7 +18,7 @@ This project is in an experimental phase. I'm currently exploring:
 - [config](./config/) Configuration for Azure AI services
 - [utils](./config/): Utility functions for file handling and logging
 
-### Conversation Flow:
+### Azure AI Conversation Flow:
 
 ```mermaid
 flowchart TD
@@ -52,6 +52,6 @@ flowchart TD
     P --> C
 ```
 
-### Langgraph Graph (so far):
+### LangGraph Graph (so far):
 
 <img src='./graph.png'>

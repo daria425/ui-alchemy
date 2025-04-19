@@ -66,6 +66,8 @@ class State(TypedDict):
     component_data: dict[str, str]
     force_generate: bool
     validation_feedback:str
+    validation_attempts: int
+    status: str
 
 
 def prune_conversation_history(state: State):
@@ -179,6 +181,7 @@ Fix the code to address these issues and ensure it meets the user's request:
 
 def validate_code(state:State):
     component_data= state.get("component_data", {})
+    validation_attempts= state.get("validation_attempts", 0)
     system_prompt=f"""
 Act as a code reviewer skilled in Frontend development. Your task is to review the following code:
 ## INSTALL SCRIPT ##
@@ -198,10 +201,12 @@ Ensure that:
 If the code meets all the above criteria, respond with "yes" only. 
 If it does not, respond with "no" and provide a brief explanation of the issues, clearly explaining how to fix."""
     messages=[SystemMessage(content=system_prompt)]
-    print("--- Code Review In Progress ---")
+    print(f"--- Code Review In Progress ---(Attempt {validation_attempts}/3)")
     response=llm.invoke(messages)
+    validation_attempts+=1
     return {
         "validation_feedback": response.content,
+        "validation_attempts": validation_attempts,
     }
 
 
@@ -244,13 +249,22 @@ Act as a UI designer. Ask a series of follow up questions to gather more informa
         "force_generate": force_generate,
     }
 
+def handle_validation_error(state: State):
+    """
+    Prevent infinite loops by limiting the number of validation attempts and returning the response after 3 attemps
+    """
+    return {
+        "status":"validation_failure"
+    }
 
 def get_final_response(state: State):
     component_result = state.get("component_data", {})
     if component_result:
         output = "\n".join(component_result.values())
         print("\n--- Generated Component ---")
-        print(output)
+        return {
+            "status":"success"
+        }
 
 
 def route_message(state: State):
@@ -269,6 +283,10 @@ def route_validation(state:State):
     """
     Route the message to the appropriate function based on the state
     """
+    validation_attempts=state.get("validation_attempts", 0)
+    if validation_attempts >= 3 and "yes" not in state["validation_feedback"].lower():
+        print("Validation failed after 3 attempts, routing to handle_validation_error")
+        return "handle_validation_error"
     if "yes" in state["validation_feedback"].lower():
         print("Code Review passed, routing to get_final_response")
         return "get_final_response"
@@ -284,6 +302,7 @@ builder.add_node("get_final_response", get_final_response)
 builder.add_node("ask_for_clarification", ask_for_clarification)
 builder.add_node("prune_conversation_history", prune_conversation_history)
 builder.add_node("validate_code", validate_code)
+builder.add_node("handle_validation_error", handle_validation_error)
 
 
 builder.add_edge(START, "understand_requirements")
@@ -309,12 +328,14 @@ builder.add_conditional_edges(
     "validate_code", route_validation, {
         "get_final_response": "get_final_response",
         "generate_code":"generate_code",
+        "handle_validation_error": "handle_validation_error",
     }
 )
 builder.add_edge("generate_code", "validate_code")
 builder.add_edge("prune_conversation_history", "generate_code")
+builder.add_edge("handle_validation_error", "get_final_response")
 graph = builder.compile()
-# display_graph(graph, "graph.png")
+display_graph(graph, "graph.png")
 
 
 # Example of running the graph
@@ -329,11 +350,15 @@ def run_ui_alchemy():
         "user_input": "",
         "force_generate": False,
         "validation_feedback": "",
+        "validation_attempts": 0,
+        "status":""
     }
 
     # Run the graph
     result = graph.invoke(initial_state)
-
+    # Display status
+    print("\n--- Graph Execution Result ---")
+    print("Status:", result["status"])
     # Display the result
     if "component_data" in result:
         print("\n--- Generated Component ---")
@@ -344,5 +369,5 @@ def run_ui_alchemy():
         print(f"Code: {component['code']}")
 
 
-if __name__ == "__main__":
-    run_ui_alchemy()
+# if __name__ == "__main__":
+    # run_ui_alchemy()
