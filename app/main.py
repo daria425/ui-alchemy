@@ -1,15 +1,16 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uuid
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Dict, Optional
-from agents.langgraph_api import graph, checkpointer, process_user_input
+from app.agent.ui_alchemy import graph, checkpointer
+from app.agent.state import process_user_input
 app = FastAPI()
 
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual origins
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,6 +53,8 @@ def create_new_session(request:ComponentRequest):
         session_id=session_id, # returned to client, used in next request
         status=result["status"],
         message=result["ai_message"],
+        component_data=result.get("component_data", None),
+        requires_input=result.get("status")=="awaiting_user_input"
 
     )
 
@@ -73,7 +76,7 @@ def add_message(session_id:str, message:UserMessage):
         session_id=session_id, # returned to client, used in next request
         status=result["status"],
         message=result["ai_message"],
-     
+     requires_input=result.get("status")=="awaiting_user_input",
         component_data=result.get("component_data", None)
     )
 

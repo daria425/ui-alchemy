@@ -1,25 +1,16 @@
-import os, sys
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from typing import TypedDict, List, Annotated, Union
-from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END, START
 from langchain_core.tools import tool
 from langchain_openai import AzureChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from utils.file_utils import load_file
-from pydantic import BaseModel
+from app.utils.file_utils import load_file
 from langgraph.checkpoint.mongodb import MongoDBSaver
 from pymongo import MongoClient
+from app.agent.config import (AGENT_INSTRUCTIONS_PATH, AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, MONGO_URI)
+from app.agent.tools import ui_gen_function
+from app.agent.state import State
 
-instruction_file_path = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "agent_instructions.txt"
-)
-
-load_dotenv()
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
-AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
-MONGO_URI = os.getenv("MONGO_URI")
 client= MongoClient(MONGO_URI)
 db = client["ui_alchemy"]
 print(f"Initializing LLM with endpoint: {AZURE_OPENAI_ENDPOINT}")
@@ -29,79 +20,6 @@ llm = AzureChatOpenAI(
     api_version="2025-01-01-preview",
 )
 checkpointer=MongoDBSaver(client=client, db_name=db.name, checkpoint_collection_name="sessions" )
-
-
-# Create our function tool
-@tool
-def ui_gen_function(install_script: str, imports: str, code: str, description: str):
-    """
-    Function to generate a Material UI component
-    :param install_script: The script to install the required packages
-    :param imports: The imports required for the component
-    :param code: The code for the component
-    :param description: The description of the component
-    :return: A dictionary containing the install script, imports, code, and description
-    """
-    return {
-        "install_script": install_script,
-        "imports": imports,
-        "code": code,
-        "description": description,
-    }
-
-
-def manage_conversation_history(existing: list, updates: Union[list, dict]):
-    if isinstance(updates, list):
-        # If updates is a list, append it to the existing conversation history
-        return existing + updates
-    elif isinstance(updates, dict) and updates.get("action"):
-        keep_count = 3  # number of previous exchanges to keep, hardcoded for now
-        if len(existing) <= keep_count:
-            return existing
-        return existing[-keep_count:]
-    return existing
-
-
-class State(TypedDict):
-    component_request: str
-    llm_response: str
-    conversation_history: Annotated[
-        List, manage_conversation_history
-    ]  # whenever a node returns an update for this field, instead of directly replacing its value, call the manage_conversation_history function to determine how to merge the old state with the update
-    user_input: str
-    component_data: dict[str, str]
-    force_generate: bool
-    validation_feedback:str
-    validation_attempts: int
-    status: str
-    ai_message: str
-
-def process_user_input(state: State, user_message:str):
-    """
-    Add users response to clarification questions to the conversation history
-    """
-    component_request=state.get("component_request", "")
-    ai_message=state.get("ai_message", "")
-    conversation_history=state.get("conversation_history", [])
-    conversation_history.append(
-        [AIMessage(content=ai_message), HumanMessage(content=user_message)]
-    )
-    
-    # Check if user wants to force generate
-    force_generate = user_message.lower() == "generate"
-    
-    if not force_generate:
-        updated_request = f"{component_request} {user_message}"
-    else:
-        updated_request = component_request
-        
-    return {
-        "conversation_history": conversation_history,
-        "user_input": user_message,
-        "component_request": updated_request,
-        "force_generate": force_generate,
-        "status": ""  # Clear awaiting_user_input status
-    }
 
 
 def prune_conversation_history(state: State):
@@ -123,7 +41,7 @@ def prune_conversation_history(state: State):
 
 def understand_requirements(state: State):
     print("Understanding requirements...")
-    system_prompt = load_file(instruction_file_path)
+    system_prompt = load_file(AGENT_INSTRUCTIONS_PATH)
     prompt = f"""Act as a requirements analyst. 
                     Given the following user request: "{state['component_request']}"
                     1. Determine if there is enough detail to generate working component code (e.g., styles, colors, labels, layout specifics).
@@ -161,7 +79,7 @@ def understand_requirements(state: State):
 def generate_code(state: State):
     """Generate the MUI code for the component"""
     print("Generating code...")
-    system_prompt = load_file(instruction_file_path)    
+    system_prompt = load_file(AGENT_INSTRUCTIONS_PATH)    
     context = "\nContext from follow up questions:\n"
     for exchange in state["conversation_history"]:
         if isinstance(exchange, list) and len(exchange) == 2:
@@ -255,7 +173,7 @@ def ask_for_clarification(state: State):
     print("Clarification required!")
     component_request = state.get("component_request", "")
     # Generate follow-up questions using the LLM
-    system_prompt = load_file(instruction_file_path)
+    system_prompt = load_file(AGENT_INSTRUCTIONS_PATH)
     prompt = f"""
 Act as a UI designer. Ask a series of follow up questions to gather more information about the request to generate the following component: "{component_request}"
 1. Ask about the specific design elements needed (e.g., colors, styles, layout).
