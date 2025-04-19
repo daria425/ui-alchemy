@@ -1,11 +1,12 @@
 import os, sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from typing import TypedDict, List, Annotated, Union
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END, START
 from langchain_core.tools import tool
 from langchain_openai import AzureChatOpenAI
-from langchain_core.messages import HumanMessage, AIMessage,SystemMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from utils.graph_utils import display_graph
 from utils.file_utils import load_file
 
@@ -22,6 +23,8 @@ llm = AzureChatOpenAI(
     azure_endpoint=AZURE_OPENAI_ENDPOINT,
     api_version="2025-01-01-preview",
 )
+
+
 # Create our function tool
 @tool
 def ui_gen_function(install_script: str, imports: str, code: str, description: str):
@@ -41,29 +44,49 @@ def ui_gen_function(install_script: str, imports: str, code: str, description: s
     }
 
 
-def manage_conversation_history(existing:list, updates: Union[list, dict]):
+def manage_conversation_history(existing: list, updates: Union[list, dict]):
     if isinstance(updates, list):
         # If updates is a list, append it to the existing conversation history
         return existing + updates
     elif isinstance(updates, dict) and updates.get("action"):
-        keep_count=3 # number of previous exchanges to keep, hardcoded for now
-        if len(existing)<= keep_count:
+        keep_count = 3  # number of previous exchanges to keep, hardcoded for now
+        if len(existing) <= keep_count:
             return existing
         return existing[-keep_count:]
     return existing
 
 
 class State(TypedDict):
-    component_request:str
-    llm_response:str
-    conversation_history:Annotated[List, manage_conversation_history] # whenever a node returns an update for this field, instead of directly replacing its value, call the manage_conversation_history function to determine how to merge the old state with the update
-    user_input:str
-    component_data:dict[str, str]
-    force_generate:bool
+    component_request: str
+    llm_response: str
+    conversation_history: Annotated[
+        List, manage_conversation_history
+    ]  # whenever a node returns an update for this field, instead of directly replacing its value, call the manage_conversation_history function to determine how to merge the old state with the update
+    user_input: str
+    component_data: dict[str, str]
+    force_generate: bool
+
+
+def prune_conversation_history(state: State):
+    """
+    Prune the conversation history to keep only the last 3 exchanges
+    """
+    # Get the existing conversation history
+    existing_history = state.get("conversation_history", [])
+    # Keep only the last 3 exchanges
+    if len(existing_history) <= 3:
+        return {}
+    return {
+        "conversation_history": {
+            "action": "prune"
+            # later add keep_count
+        }
+    }
+
 
 def understand_requirements(state: State):
-    system_prompt=load_file(instruction_file_path)
-    prompt=f"""Act as a requirements analyst. 
+    system_prompt = load_file(instruction_file_path)
+    prompt = f"""Act as a requirements analyst. 
                     Given the following user request: "{state['component_request']}"
                     1. Determine if there is enough detail to generate working component code (e.g., styles, colors, labels, layout specifics).
                     2. If YES, respond only with "yes".
@@ -89,21 +112,21 @@ def understand_requirements(state: State):
                     User Prompt: "Create a card component showing a user's profile picture, name, and email, with a light gray background."
                     Assistant: yes
                     """
-    messages=[SystemMessage(content=system_prompt),HumanMessage(content=prompt)]
-    response=llm.invoke(messages)
+    messages = [SystemMessage(content=system_prompt), HumanMessage(content=prompt)]
+    response = llm.invoke(messages)
     return {
         "llm_response": response.content,
     }
 
 
-def generate_code(state:State):
+def generate_code(state: State):
     """Generate the MUI code for the component"""
     print("State in generate code", state)
-    system_prompt=load_file(instruction_file_path)
-    context="\nContext from follow up questions:\n"
+    system_prompt = load_file(instruction_file_path)
+    context = "\nContext from follow up questions:\n"
     for exchange in state["conversation_history"]:
         if isinstance(exchange, list) and len(exchange) == 2:
-            ai_msg, human_msg= exchange
+            ai_msg, human_msg = exchange
             context += f"Question: {ai_msg.content}\nAnswer: {human_msg.content}\n\n"
     user_prompt = f"""Generate a Material UI component based on this description:
     "{state['component_request']}"
@@ -111,20 +134,19 @@ def generate_code(state:State):
     Create high-quality, production-ready code that matches all specifications.
     Use the ui_gen_function tool to return the structured data.
     """
-    messages=[
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_prompt)
-    ]
-    llm_with_tools=llm.bind_tools([ui_gen_function], tool_choice="required")
-    response=llm_with_tools.invoke(messages)
-    tool_calls=response.tool_calls
+    messages = [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)]
+    llm_with_tools = llm.bind_tools([ui_gen_function], tool_choice="required")
+    response = llm_with_tools.invoke(messages)
+    tool_calls = response.tool_calls
     if tool_calls:
         # Extract the tool call data
-        tool_call = next((call for call in tool_calls if call['name'] == "ui_gen_function"), None)
-        install_script = tool_call['args']["install_script"]
-        imports = tool_call['args']["imports"]
-        code = tool_call['args']["code"]
-        description = tool_call['args']["description"]
+        tool_call = next(
+            (call for call in tool_calls if call["name"] == "ui_gen_function"), None
+        )
+        install_script = tool_call["args"]["install_script"]
+        imports = tool_call["args"]["imports"]
+        code = tool_call["args"]["code"]
+        description = tool_call["args"]["description"]
         return {
             "component_data": {
                 "install_script": install_script,
@@ -135,40 +157,38 @@ def generate_code(state:State):
         }
 
 
-
-
-
-
-def ask_for_clarification(state:State):
+def ask_for_clarification(state: State):
     """
     Generate clarifying questions and wait for user input
     """
     # Get current component request
     component_request = state.get("component_request", "")
     # Generate follow-up questions using the LLM
-    system_prompt=load_file(instruction_file_path)
-    prompt=f"""
+    system_prompt = load_file(instruction_file_path)
+    prompt = f"""
 Act as a UI designer. Ask a series of follow up questions to gather more information about the request to generate the following component: "{component_request}"
 1. Ask about the specific design elements needed (e.g., colors, styles, layout).
 2. Inquire about the functionality and behavior of the component (e.g., click handlers, data binding).
 3. Clarify the context in which the component will be used (e.g., part of a larger application, standalone).
 4. Be conscise. No yapping.
 """
-    messages=[SystemMessage(content=system_prompt),HumanMessage(content=prompt)]
-    response=llm.invoke(messages)
-    clarification_questions=response.content
+    messages = [SystemMessage(content=system_prompt), HumanMessage(content=prompt)]
+    response = llm.invoke(messages)
+    clarification_questions = response.content
     print("\n--- UI Alchemy Needs More Information ---")
     print(clarification_questions)
 
     user_input = input("\nYour response (or type 'generate' to proceed anyway): ")
     conversation_history = state.get("conversation_history", [])
-    conversation_history.append([AIMessage(content=clarification_questions), HumanMessage(content=user_input)])
-    
+    conversation_history.append(
+        [AIMessage(content=clarification_questions), HumanMessage(content=user_input)]
+    )
+
     force_generate = user_input.lower() == "generate"
     if not force_generate:
-        updated_request=f"{component_request} {user_input}"
+        updated_request = f"{component_request} {user_input}"
     else:
-        updated_request=component_request
+        updated_request = component_request
     return {
         "conversation_history": conversation_history,
         "user_input": user_input,
@@ -177,15 +197,14 @@ Act as a UI designer. Ask a series of follow up questions to gather more informa
     }
 
 
-    
-def get_final_response(state:State):
+def get_final_response(state: State):
     print("State in get_final_response", state)
-    component_result=state.get("component_data", {})
+    component_result = state.get("component_data", {})
     if component_result:
-        output="\n".join(component_result.values())
+        output = "\n".join(component_result.values())
         print("\n--- Generated Component ---")
         print(output)
-    
+
 
 def route_message(state: State):
     """
@@ -200,46 +219,57 @@ def route_message(state: State):
     else:
         return "ask_for_clarification"
 
-builder=StateGraph(State)
+
+builder = StateGraph(State)
 builder.add_node("understand_requirements", understand_requirements)
 builder.add_node("generate_code", generate_code)
 builder.add_node("get_final_response", get_final_response)
 builder.add_node("ask_for_clarification", ask_for_clarification)
+builder.add_node("prune_conversation_history", prune_conversation_history)
+
 
 builder.add_edge(START, "understand_requirements")
 builder.add_edge("get_final_response", END)
 
 builder.add_conditional_edges(
-    "understand_requirements",route_message, {
-        "generate_code": "generate_code",
+    "understand_requirements",
+    route_message,
+    {
+        "generate_code": "prune_conversation_history",
         "ask_for_clarification": "ask_for_clarification",
-    } 
+    },
 )
 builder.add_conditional_edges(
-    "ask_for_clarification", route_message, {
-        "generate_code": "generate_code",
+    "ask_for_clarification",
+    route_message,
+    {
+        "generate_code": "prune_conversation_history",
         "ask_for_clarification": "understand_requirements",
-    }
+    },
 )
+builder.add_edge("prune_conversation_history", "generate_code")
+
 builder.add_edge("generate_code", "get_final_response")
-graph=builder.compile()
+graph = builder.compile()
 display_graph(graph, "graph.png")
+
+
 # Example of running the graph
 def run_ui_alchemy():
     user_prompt = input("Describe the UI component you want to create: ")
-    
+
     # Initialize state with the user's component request
     initial_state = {
         "component_request": user_prompt,
         "llm_response": "",
         "conversation_history": [],
-        "user_input": "", 
+        "user_input": "",
         "force_generate": False,
     }
-    
+
     # Run the graph
     result = graph.invoke(initial_state)
-    
+
     # Display the result
     if "component_data" in result:
         print("\n--- Generated Component ---")
@@ -248,6 +278,7 @@ def run_ui_alchemy():
         print(f"Install Script: {component['install_script']}")
         print(f"Imports: {component['imports']}")
         print(f"Code: {component['code']}")
+
 
 if __name__ == "__main__":
     run_ui_alchemy()
