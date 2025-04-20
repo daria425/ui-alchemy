@@ -1,6 +1,7 @@
-# UI-Alchemy
-
-<img height="100px" width="100px" src='./ui_alchemy.png'>
+<div align="center">
+  <h1>UI-Alchemy ✨</h1>
+  <img height="150px" width="150px" src='./ui_alchemy.png'>
+</div>
 
 ## Overview
 
@@ -40,7 +41,12 @@ This project uses LangGraph to orchestrate component generation and FastAPI to e
 ## Component Generation Flow
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#a867c9', 'primaryTextColor': '#fff', 'primaryBorderColor': '#9152b0', 'lineColor': '#e083cb', 'secondaryColor': '#f7c6e6', 'tertiaryColor': '#f4ebfa' }}}%%
 flowchart TD
+    classDef default fill:#a867c9,stroke:#9152b0,color:#fff
+    classDef decision fill:#e083cb,stroke:#c767ad,color:#fff,stroke-width:2px
+    classDef endpoint fill:#f7c6e6,stroke:#e4a8d4,color:#333
+
     A[Start] --> B[Initialize Session]
     B --> C[Understand Requirements]
     C --> D{Enough Information?}
@@ -51,12 +57,16 @@ flowchart TD
     G --> H[Process User Input]
     H --> C
 
-    D -- Yes --> I[Generate Component Code]
-    I --> J[Validate Component]
-    J --> K{Valid Component?}
+    D -- Yes --> I[Select Libraries]
+    I --> J[Generate Component Code]
+    J --> K[Validate Component]
+    K --> L{Valid Component?}
 
-    K -- No --> L[Fix Validation Issues]
-    L --> J
+    L -- No --> M[Fix Validation Issues]
+    M --> K
 
-    K -- Yes --> M[Return Completed Component]
+    L -- Yes --> N[Return Completed Component]
+
+    class D,L decision
+    class A,F,G,N endpoint
 ```
