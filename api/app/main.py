@@ -37,7 +37,8 @@ def create_new_session(request:ComponentRequest):
     session_id=str(uuid.uuid4())
     initial_state = {
         "component_request": request.description,
-        "llm_response": "",
+        "valid_request": "",
+        "ui_guidance":"",
         "conversation_history": [],
         "user_input": "",
         "force_generate": False,

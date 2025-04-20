@@ -14,8 +14,8 @@ export default function App() {
   );
 }
 
-Example:
-// Generated component:
+Examples:
+// Generated component 1:
 // A comparison card showing active users for this week versus last week, including percentage change and highlighting positive or negative growth.
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -54,6 +54,77 @@ RequestedComponent.propTypes = {
 };
 
 export default RequestedComponent;
+
+//Generated Component 2
+//Bouncy CTA with hover scale + color transition
+import React from 'react';
+import { Button } from '@chakra-ui/react';
+import { motion } from 'framer-motion';
+import PropTypes from 'prop-types';
+
+const MotionButton = motion(Button);
+
+const RequestedComponent = ({ label = "Click Me!", color = "teal" }) => {
+  return (
+    <MotionButton
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.95 }}
+      colorScheme={color}
+      size="lg"
+      p={6}
+      borderRadius="full"
+      shadow="md"
+    >
+      {label}
+    </MotionButton>
+  );
+};
+
+RequestedComponent.propTypes = {
+  label: PropTypes.string,
+  color: PropTypes.string,
+};
+
+export default RequestedComponent;
+
+// Generated Component 3:
+// Mini line chart showing trends
+import React from 'react';
+import PropTypes from 'prop-types';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+const mockData = [
+  { name: 'Mon', value: 120 },
+  { name: 'Tue', value: 150 },
+  { name: 'Wed', value: 100 },
+  { name: 'Thu', value: 170 },
+  { name: 'Fri', value: 140 },
+];
+
+const RequestedComponent = ({ data = mockData, title = "Weekly Traffic" }) => {
+  return (
+    <div className="p-4 rounded-2xl shadow-lg bg-white w-full max-w-md">
+      <h2 className="text-xl font-semibold mb-2">{title}</h2>
+      <ResponsiveContainer width="100%" height={200}>
+        <LineChart data={data}>
+          <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip />
+          <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+RequestedComponent.propTypes = {
+  data: PropTypes.arrayOf(PropTypes.object),
+  title: PropTypes.string,
+};
+
+export default RequestedComponent;
+
 
 IF YOU DO NOT HAVE ENOUGH INFORMATION TO GENERATE A COMPONENT:
 1. Ask the user follow up questions (color preferences, data to display)

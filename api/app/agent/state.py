@@ -19,6 +19,7 @@ class State(TypedDict):
         List, manage_conversation_history
     ]  # whenever a node returns an update for this field, instead of directly replacing its value, call the manage_conversation_history function to determine how to merge the old state with the update
     user_input: str
+    ui_guidance:str
     component_data: dict[str, str]
     force_generate: bool
     validation_feedback: str

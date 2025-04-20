@@ -106,9 +106,11 @@ And follow-up context:\n{context}"
     3. Provide a clear, deterministic list of recommended libraries.
     4. Avoid vague or ambiguous language.
     5. Clearly mention the names of the packages to install from npm.
+    6.Provide brief guidance on why these libraries are suitable for the component.
 """
     messages=[SystemMessage(content=system_prompt)]
     response=llm.invoke(messages)
+    print("Selected libraries:", response.content)
     return {
         "ui_guidance": response.content,
     }
@@ -116,7 +118,8 @@ And follow-up context:\n{context}"
 def generate_code(state: State):
     """Generate code for the component"""
     print("Generating code...")
-    system_prompt = load_file(AGENT_INSTRUCTIONS_PATH)    
+    ui_guidance= state.get("ui_guidance", "")
+    system_prompt = load_file(AGENT_INSTRUCTIONS_PATH, replacements={"ui_guidance": ui_guidance})    
     context = "\nContext from follow up questions:\n"
     for exchange in state["conversation_history"]:
         if isinstance(exchange, list) and len(exchange) == 2:
@@ -138,9 +141,11 @@ Component:
 Fix the code to address these issues and ensure it meets the user's request:
 {state['component_request']}.
 """
+        print("Validation feedback received - generating code with fixes...")
         messages=[
         SystemMessage(content=system_prompt)]
     else:
+        print("Passed validation - generating code...")
         user_prompt = f"""Generate a component based on this description:
             "{state['component_request']}"
             {context}
@@ -160,6 +165,7 @@ Fix the code to address these issues and ensure it meets the user's request:
         imports = tool_call["args"]["imports"]
         code = tool_call["args"]["code"]
         description = tool_call["args"]["description"]
+        print("Generated code:", code)
         return {
             "component_data": {
                 "install_script": install_script,
@@ -187,7 +193,7 @@ Act as a code reviewer skilled in Frontend development. Your task is to review t
 Ensure that:
 1. It is syntactically correct and adheres to best practices.
 2. It is well-structured and easy to read.
-3.It includes a default export called MUI Component.
+3.It includes a default export called RequestedComponent.
 4. The component within the code is fully self contained, can be rendered alone and does not rely on any external variables or data.
 5. The component fits the following request: {state['component_request']}
 If the code meets all the above criteria, respond with "yes" only. 
@@ -195,6 +201,7 @@ If it does not, respond with "no" and provide a brief explanation of the issues,
     messages=[SystemMessage(content=system_prompt)]
     print(f"--- Code Review In Progress ---(Attempt {validation_attempts}/3)")
     response=llm.invoke(messages)
+    print("Feedback from code review:", response.content)
     validation_attempts+=1
     return {
         "validation_feedback": response.content,
@@ -316,7 +323,7 @@ builder.add_edge("prune_conversation_history", "generate_code")
 builder.add_edge("generate_code", "validate_code")
 builder.add_edge("handle_validation_error", "get_final_response")
 graph=builder.compile(checkpointer=checkpointer, interrupt_after=["ask_for_clarification"])
-display_graph(graph, "graph.png")
+
 
 
 
