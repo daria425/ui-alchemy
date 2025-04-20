@@ -52,5 +52,10 @@ def process_user_input(state: dict, user_message: str):
         "component_request": updated_request,
         "force_generate": force_generate,
         "status": "",  # Clear awaiting_user_input status
-        "ai_message": ""  # Also clear the AI message
+        "ai_message": "",
+          "validation_attemps":0, 
+          "validation_feedback":"", 
+          "ui_guidance":"", 
+            "valid_request":""
+
     }

@@ -18,4 +18,7 @@ CHECKPOINT_COLLECTION = "sessions"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # This is /home/vboxuser/repos/ui-alchemy/app/agent/
 
 # File paths - corrected to point directly to agent_instructions.txt in the same directory
-AGENT_INSTRUCTIONS_PATH = os.path.join(BASE_DIR, "agent_instructions.txt")
+UI_GEN_AGENT_INSTRUCTIONS_PATH = os.path.join(BASE_DIR, "ui_gen_agent_instructions.txt")
+VALIDATION_AGENT_INSTRUCTIONS_PATH = os.path.join(BASE_DIR, "validation_agent_instructions.txt")
+UNDERSTAND_REQUIREMENTS_INSTRUCTIONS_PATH = os.path.join(BASE_DIR, "understand_requirements_instructions.txt")
+SELECT_LIBRARIES_INSTRUCTIONS_PATH = os.path.join(BASE_DIR, "select_libraries_instructions.txt")

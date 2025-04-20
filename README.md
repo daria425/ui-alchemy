@@ -1,8 +1,10 @@
 # UI-Alchemy
 
+<img height="100px" width="100px" src='./ui_alchemy.png'>
+
 ## Overview
 
-WIP: UI-Alchemy is a Python-based API tool designed to generate customizable React components using Material UI.
+WIP: UI-Alchemy is a Python-based API tool designed to generate customizable React components.
 
 ## Architecture
 

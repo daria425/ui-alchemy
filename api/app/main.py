@@ -55,7 +55,7 @@ def create_new_session(request:ComponentRequest):
         status=result["status"],
         message=result["ai_message"],
         component_data=result.get("component_data", None),
-        requires_input=result.get("status")=="awaiting_user_input"
+        requires_input=result.get("status")=="awaiting_user_input", 
 
     )
 
@@ -78,7 +78,7 @@ def add_message(session_id:str, message:UserMessage):
         status=result["status"],
         message=result["ai_message"],
      requires_input=result.get("status")=="awaiting_user_input",
-        component_data=result.get("component_data", None)
+        component_data=None if result.get("status")=="awaiting_user_input" else result.get("component_data", None),
     )
 
 
