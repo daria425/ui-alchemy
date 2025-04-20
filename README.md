@@ -17,7 +17,9 @@ This project uses LangGraph to orchestrate component generation and FastAPI to e
 
 ## Project Structure
 
-- `/app`: Main application code
+-`/api`:
+
+- `/app`: Main backend application code
   - `/agent`: Contains the LangGraph workflow and state management
     - `ui_alchemy.py`: Core LangGraph workflow
     - `state.py`: State definitions and management
@@ -31,7 +33,7 @@ This project uses LangGraph to orchestrate component generation and FastAPI to e
 | Endpoint                                         | Method | Description                                  |
 | ------------------------------------------------ | ------ | -------------------------------------------- |
 | `/ui-alchemy/api/sessions`                       | POST   | Create a new component generation session    |
-| `/ui-alchemy/api/sessions/{session_id}/messages` | POST   | Continue an existing session with user input |
+| `/ui-alchemy/api/sessions/messages?{session_id}` | POST   | Continue an existing session with user input |
 
 ## Component Generation Flow
 
