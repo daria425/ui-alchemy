@@ -1,10 +1,9 @@
-
-from typing import TypedDict, List, Annotated, Union
+# RUN WITH  python -m app.agent.ui_alchemy
 from langgraph.graph import StateGraph, END, START
-from langchain_core.tools import tool
 from langchain_openai import AzureChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from app.utils.file_utils import load_file
+from app.utils.graph_utils import display_graph
 from langgraph.checkpoint.mongodb import MongoDBSaver
 from pymongo import MongoClient
 from app.agent.config import (AGENT_INSTRUCTIONS_PATH, AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, MONGO_URI)
@@ -71,13 +70,51 @@ def understand_requirements(state: State):
     messages = [SystemMessage(content=system_prompt), HumanMessage(content=prompt)]
     response = llm.invoke(messages)
     return {
-        "llm_response": response.content,
+        "valid_request": response.content,
     }
 
+def select_libraries(state: State):
+    """Select the appropriate libraries for the component based on the user description"""
+    print("Selecting libraries...")
+    context = "\nContext from follow up questions:\n"
+    for exchange in state["conversation_history"]:
+        if isinstance(exchange, list) and len(exchange) == 2:
+            ai_msg, human_msg = exchange
+            context += f"Question: {ai_msg.content}\nAnswer: {human_msg.content}\n\n"
+    system_prompt=f"""
+Act as a UI designer and experienced Frontend developer. Based on this UI component description {state['component_request']}
+And follow-up context:\n{context}"
+    Determine the most appropriate React library/libraries to implement this component.
+    Consider these options and combinations. These are the only libraries you can use:
+   
+    1. Material UI (@mui/material) - Standard components with Google Material Design
+    2. Chakra UI - Accessible and customizable component system
+    3. React Bootstrap - Bootstrap for React applications
+    4. Ant Design - Enterprise-grade UI components
+    5. Tailwind CSS - Utility-first CSS framework (pair with headless UI if needed)
+    6. Specialty libraries when needed:
+       - For charts/graphs: recharts, visx, or chart.js
+       - For complex tables: react-table or tanstack table
+       - For animations: framer-motion or react-spring
+       - For forms: react-hook-form, formik, or yup for validation
+       - For date handling: date-fns or moment.js
 
+    Keep your analysis focused on the component's requirements and the libraries' capabilities.
+    Your response must adhere to the following guidelines:
+    1. Be concise and avoid unnecessary details. 
+    2. Keep your response to 1-3 sentences.
+    3. Provide a clear, deterministic list of recommended libraries.
+    4. Avoid vague or ambiguous language.
+    5. Clearly mention the names of the packages to install from npm.
+"""
+    messages=[SystemMessage(content=system_prompt)]
+    response=llm.invoke(messages)
+    return {
+        "ui_guidance": response.content,
+    }
 
 def generate_code(state: State):
-    """Generate the MUI code for the component"""
+    """Generate code for the component"""
     print("Generating code...")
     system_prompt = load_file(AGENT_INSTRUCTIONS_PATH)    
     context = "\nContext from follow up questions:\n"
@@ -104,7 +141,7 @@ Fix the code to address these issues and ensure it meets the user's request:
         messages=[
         SystemMessage(content=system_prompt)]
     else:
-        user_prompt = f"""Generate a Material UI component based on this description:
+        user_prompt = f"""Generate a component based on this description:
             "{state['component_request']}"
             {context}
             Create high-quality, production-ready code that matches all specifications.
@@ -215,7 +252,7 @@ def route_message(state: State):
     if state.get("force_generate", False):
         print("Force generate is TRUE - routing to generate_code")
         return "generate_code"
-    if "yes" in state["llm_response"].lower():
+    if "yes" in state["valid_request"].lower():
         print("Requirements understood - routing to generate_code")
         return "generate_code"
     else:
@@ -239,6 +276,7 @@ def route_validation(state:State):
 
 builder = StateGraph(State)
 builder.add_node("understand_requirements", understand_requirements)
+builder.add_node("select_libraries", select_libraries)
 builder.add_node("generate_code", generate_code)
 builder.add_node("get_final_response", get_final_response)
 builder.add_node("ask_for_clarification", ask_for_clarification)
@@ -254,7 +292,7 @@ builder.add_conditional_edges(
     "understand_requirements",
     route_message,
     {
-        "generate_code": "prune_conversation_history",
+        "generate_code": "select_libraries",
         "ask_for_clarification": "ask_for_clarification",
     },
 )
@@ -262,7 +300,7 @@ builder.add_conditional_edges(
     "ask_for_clarification",
     route_message,
     {
-        "generate_code": "prune_conversation_history",
+        "generate_code": "select_libraries",
         "ask_for_clarification": END
     },
 )
@@ -273,11 +311,12 @@ builder.add_conditional_edges(
         "handle_validation_error": "handle_validation_error",
     }
 )
-builder.add_edge("generate_code", "validate_code")
+builder.add_edge("select_libraries", "prune_conversation_history")
 builder.add_edge("prune_conversation_history", "generate_code")
+builder.add_edge("generate_code", "validate_code")
 builder.add_edge("handle_validation_error", "get_final_response")
 graph=builder.compile(checkpointer=checkpointer, interrupt_after=["ask_for_clarification"])
-
+display_graph(graph, "graph.png")
 
 
 

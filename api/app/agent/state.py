@@ -14,7 +14,7 @@ def manage_conversation_history(existing: list, updates: Union[list, dict]):
 
 class State(TypedDict):
     component_request: str
-    llm_response: str
+    valid_request: str
     conversation_history: Annotated[
         List, manage_conversation_history
     ]  # whenever a node returns an update for this field, instead of directly replacing its value, call the manage_conversation_history function to determine how to merge the old state with the update
