@@ -1,0 +1,5 @@
+.radix-themes {
+  --ui-alchemy-color: #72b0fb;
+  --sky-9: var(--ui-alchemy-color);
+  --sky-a9: var(--ui-alchemy-color);
+}
