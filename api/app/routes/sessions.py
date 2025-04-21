@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from app.models.component_generation import ComponentRequest, UserMessage, ComponentResponse
-from uuid import uuid
+from uuid import uuid4
 from app.agent.ui_alchemy import graph, checkpointer
 from app.agent.state import process_user_input
 router=APIRouter(prefix="/ui-alchemy/api/sessions")
@@ -12,7 +12,7 @@ def create_new_session(request: ComponentRequest):
     Start a new component generation session
     """
     try:
-        session_id=str(uuid.uuid4())
+        session_id = str(uuid4())
         initial_state = {
             "component_request": request.description,
             "valid_request": "",
