@@ -6,7 +6,6 @@ export default function ProtectedRoute() {
     useContext(AuthContext);
   const location = useLocation();
   const nav = useNavigate();
-  console.log("Protected route rerendered with", authenticatedUser);
   useEffect(() => {
     if (error) {
       setError(null);

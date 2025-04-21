@@ -3,7 +3,7 @@ import { AIMessage } from "../common/Messages";
 import { IconButton } from "@radix-ui/themes";
 import { PaperPlaneIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useOutletContext } from "react-router";
 import { apiConfig } from "../../config/api.config";
 export default function Chat() {
   const { sessionId } = useParams();
@@ -14,7 +14,7 @@ export default function Chat() {
   const [loading, setLoading] = useState(false);
   const [apiResponse, setApiResponse] = useState(null);
   const isNewSession = !sessionId;
-
+  const { getIdToken } = useOutletContext();
   const handleInput = (e) => {
     setUserInput(e.target.value);
   };
@@ -27,22 +27,36 @@ export default function Chat() {
     setFetchError(false);
     try {
       let response;
+      const idToken = await getIdToken();
       if (isNewSession) {
-        response = await apiConfig.post("ui-alchemy/api/sessions", {
-          description: userInput,
-        });
+        response = await apiConfig.post(
+          "ui-alchemy/api/sessions",
+          {
+            description: userInput,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          }
+        );
       } else {
         response = await apiConfig.post(
           `ui-alchemy/api/sessions/${sessionId}/messages`,
           {
             message: userInput,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
           }
         );
       }
       setApiResponse(response.data);
       console.log("Response data:", response.data);
       setUserInput("");
-      nav(`/chat/${response.data.session_id}`);
+      nav(`/app/chat/${response.data.session_id}`);
     } catch (error) {
       console.error("Error submitting request:", error);
       setFetchError(true);

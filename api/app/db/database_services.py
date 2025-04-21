@@ -1,7 +1,7 @@
 from app.db.database_client import DatabaseClient
 from app.utils.logger import logger
 from pymongo.collection import Collection
-
+from datetime import datetime, timezone
 class BaseDatabaseService:
     """
     Base class for db collections
@@ -44,6 +44,29 @@ class BaseDatabaseService:
             logger.error(f"❌ Error finding document: {e} ❌")
             raise
 
+    def update_one(self, query: dict, update: dict):
+        """
+        Update a single document in the collection
+        """
+        try:
+            result=self.collection.update_one(query, update)
+            return result
+        except Exception as e:
+            logger.error(f"❌ Error updating document: {e} ❌")
+            raise
+
+    def find_many(self, query: dict, projection: dict = {"_id":0}):
+        """
+        Find many documents in the collection
+        """
+        try:
+            cursor=self.collection.find(query, projection)
+            results = list(cursor)
+            return results
+        except Exception as e:
+            logger.error(f"❌ Error finding documents: {e} ❌")
+            raise
+
 class UserDatabaseService(BaseDatabaseService):
     """
     User database service
@@ -76,3 +99,19 @@ class UserDatabaseService(BaseDatabaseService):
         if "_id" in user_data:
             user_data["_id"]=str(user_data["_id"])
         return user_data
+    
+class SessionDatabaseService(BaseDatabaseService):
+    def __init__(self):
+        super().__init__("sessions")
+    
+    def update_session_metadata(self, session_id: str):
+        """
+        Update a session
+        """
+        update={"configurable.metadata.updated_at": datetime.now(timezone.utc)}
+        try:
+            result=self.update_one({"session_id": session_id}, {"$set": update})
+            return result
+        except Exception as e:
+            logger.error(f"❌ Error updating session: {e} ❌")
+            raise

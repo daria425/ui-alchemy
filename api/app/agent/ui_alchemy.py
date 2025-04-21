@@ -23,38 +23,6 @@ code_review_llm = None
 _initialized = False
 
 
-def initialize_ui_alchemy():
-    """
-    Initialize the UI Alchemy agent with the necessary configurations.
-    This function should be called once at the start of the application.
-    """
-    global graph, checkpointer, llm, code_review_llm, _initialized
-    if _initialized:
-        return graph, checkpointer
-    logger.info("🦊🔃 Initializing UI Alchemy & Alloy the agent... 🦊🔃")
-    # Load environment variables and initialize database client
-    db_client_instance=DatabaseClient.get_instance()
-    client = db_client_instance.client
-    db = db_client_instance.db
-    llm = AzureChatOpenAI(
-        api_key=AZURE_OPENAI_API_KEY,
-        azure_endpoint=AZURE_OPENAI_ENDPOINT,
-        api_version="2025-01-01-preview",
-        temperature=0.5,
-    )
-    code_review_llm = AzureChatOpenAI(
-        api_key=AZURE_OPENAI_API_KEY,
-        azure_endpoint=AZURE_OPENAI_ENDPOINT,
-        api_version="2025-01-01-preview",
-        temperature=0,
-    )
-    checkpointer = MongoDBSaver(
-        client=client, db_name=db.name, checkpoint_collection_name="sessions",
-    )
-    _initialized = True
-    logger.info("🔮🦊 Alloy & UI Alchemy initialized successfully 🦊🔮")
-    return graph, checkpointer
-
 
 def prune_conversation_history(state: State):
     """
@@ -395,6 +363,41 @@ builder.add_edge("select_libraries", "prune_conversation_history")
 builder.add_edge("prune_conversation_history", "generate_code")
 builder.add_edge("generate_code", "validate_code")
 builder.add_edge("handle_validation_error", "get_final_response")
-graph = builder.compile(
-    checkpointer=checkpointer, interrupt_after=["ask_for_clarification"]
-)
+
+def initialize_ui_alchemy():
+    """
+    Initialize the UI Alchemy agent with the necessary configurations.
+    This function should be called once at the start of the application.
+    """
+    global graph, checkpointer, llm, code_review_llm, _initialized
+    if _initialized:
+        return graph, checkpointer
+    logger.info("🦊🔃 Initializing UI Alchemy & Alloy the agent... 🦊🔃")
+    # Load environment variables and initialize database client
+    db_client_instance=DatabaseClient.get_instance()
+    client = db_client_instance.client
+    db = db_client_instance.db
+    llm = AzureChatOpenAI(
+        api_key=AZURE_OPENAI_API_KEY,
+        azure_endpoint=AZURE_OPENAI_ENDPOINT,
+        api_version="2025-01-01-preview",
+        temperature=0.5,
+    )
+    code_review_llm = AzureChatOpenAI(
+        api_key=AZURE_OPENAI_API_KEY,
+        azure_endpoint=AZURE_OPENAI_ENDPOINT,
+        api_version="2025-01-01-preview",
+        temperature=0,
+    )
+    checkpointer = MongoDBSaver(
+        client=client, db_name=db.name, checkpoint_collection_name="sessions",
+    )
+    
+    graph = builder.compile(
+        checkpointer=checkpointer, interrupt_after=["ask_for_clarification"])
+    _initialized = True
+    logger.info("🔮🦊 Alloy & UI Alchemy initialized successfully 🦊🔮")
+    return graph, checkpointer
+
+
+
