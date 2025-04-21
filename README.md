@@ -20,8 +20,6 @@ This project uses LangGraph to orchestrate component generation and FastAPI to e
 
 ## Project Structure
 
-## Project Structure
-
 - `/api`: Backend API
   - `/app`: Main application code
     - `/agent`: LangGraph workflow and state management
@@ -30,15 +28,12 @@ This project uses LangGraph to orchestrate component generation and FastAPI to e
       - `tools.py`: Tool implementations for component generation
       - `config.py`: Agent configuration settings
     - `/config`: Application configuration
-      - `firebase_config.py`: Firebase integration settings
-      - `firebase_key.json`: Firebase credentials (git-ignored)
     - `/db`: Database related code
       - `database_client.py`: MongoDB connection management
       - `database_services.py`: Collection-specific database services
-      - `database_service_provider.py`: Service providers for dependency injection
+      - `database_service_provider.py`: Service provider for dependency injection
     - `/models`: Data models and schemas
       - `component_generation.py`: Component generation request/response models
-      - `auth.py`: Authentication-related models
     - `/routes`: API endpoints
       - `sessions.py`: Component generation session management
       - `auth.py`: Authentication endpoints
@@ -46,7 +41,6 @@ This project uses LangGraph to orchestrate component generation and FastAPI to e
       - `logger.py`: Logging configuration
       - `file_utils.py`: File handling utilities
       - `auth_utils.py`: Authentication utilities
-    - `/dependencies`: FastAPI dependencies
     - `main.py`: Application entry point and lifecycle management
   - `requirements.txt`: Python dependencies
 - `/client`: Frontend React application
@@ -58,14 +52,6 @@ This project uses LangGraph to orchestrate component generation and FastAPI to e
     - `/contexts`: React context providers
       - `AuthContext.jsx`: Authentication state management
     - `/config`: Frontend configuration
-  - `package.json`: JavaScript dependencies
-
-## API Endpoints
-
-| Endpoint                                         | Method | Description                                  |
-| ------------------------------------------------ | ------ | -------------------------------------------- |
-| `/ui-alchemy/api/sessions`                       | POST   | Create a new component generation session    |
-| `/ui-alchemy/api/sessions/{session_id}/messages` | POST   | Continue an existing session with user input |
 
 ## Component Generation Flow
 
