@@ -10,13 +10,14 @@ from app.agent.config import (
     UI_GEN_AGENT_INSTRUCTIONS_PATH,
     AZURE_OPENAI_API_KEY,
     AZURE_OPENAI_ENDPOINT,
-    MONGO_URI,
 )
 from app.agent.tools import ui_gen_function
 from app.agent.state import State
+from app.db.database_client import DatabaseClient
 
-client = MongoClient(MONGO_URI)
-db = client["ui_alchemy"]
+db_client_instance=DatabaseClient.get_instance()
+client = db_client_instance.client
+db = db_client_instance.db
 print(f"Initializing LLM with endpoint: {AZURE_OPENAI_ENDPOINT}")
 llm = AzureChatOpenAI(
     api_key=AZURE_OPENAI_API_KEY,
