@@ -31,7 +31,7 @@ def initialize_ui_alchemy():
     global graph, checkpointer, llm, code_review_llm, _initialized
     if _initialized:
         return graph, checkpointer
-    print("🦊🔃 Initializing UI Alchemy & Alloy the agent... 🦊🔃")
+    logger.info("🦊🔃 Initializing UI Alchemy & Alloy the agent... 🦊🔃")
     # Load environment variables and initialize database client
     db_client_instance=DatabaseClient.get_instance()
     client = db_client_instance.client
