@@ -9,27 +9,39 @@ export default function Chat() {
   const { sessionId } = useParams();
   const nav = useNavigate();
   const textSize = 4;
-  const [componentRequest, setComponentRequest] = useState("");
+  const [userInput, setUserInput] = useState("");
   const [fetchError, setFetchError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [apiResponse, setApiResponse] = useState(null);
+  const isNewSession = !sessionId;
+
   const handleInput = (e) => {
-    setComponentRequest(e.target.value);
+    setUserInput(e.target.value);
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!componentRequest.trim()) {
+    if (!userInput.trim()) {
       return;
     }
     setLoading(true);
     setFetchError(false);
     try {
-      const response = await apiConfig.post("ui-alchemy/api/sessions", {
-        description: componentRequest,
-      });
+      let response;
+      if (isNewSession) {
+        response = await apiConfig.post("ui-alchemy/api/sessions", {
+          description: userInput,
+        });
+      } else {
+        response = await apiConfig.post(
+          `ui-alchemy/api/sessions/${sessionId}/messages`,
+          {
+            message: userInput,
+          }
+        );
+      }
       setApiResponse(response.data);
       console.log("Response data:", response.data);
-      setComponentRequest("");
+      setUserInput("");
       nav(`/chat/${response.data.session_id}`);
     } catch (error) {
       console.error("Error submitting request:", error);
@@ -77,7 +89,7 @@ export default function Chat() {
           <TextArea
             placeholder="Describe your component here..."
             style={{ paddingRight: "40px" }}
-            value={componentRequest}
+            value={userInput}
             onChange={handleInput}
             required
           />

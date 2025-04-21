@@ -31,7 +31,7 @@ code_review_llm = AzureChatOpenAI(
     temperature=0,
 )
 checkpointer = MongoDBSaver(
-    client=client, db_name=db.name, checkpoint_collection_name="sessions"
+    client=client, db_name=db.name, checkpoint_collection_name="sessions",
 )
 
 

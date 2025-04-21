@@ -6,7 +6,7 @@ import Chat from "./components/chats/Chat";
 const router = createBrowserRouter([
   { path: "/", element: <Index /> },
   { path: "/chat", element: <Chat /> },
-  { path: "chat/:session_id", element: <Chat /> },
+  { path: "chat/:sessionId", element: <Chat /> },
 ]);
 
 function App() {
