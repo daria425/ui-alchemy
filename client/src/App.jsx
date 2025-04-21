@@ -5,6 +5,7 @@ import Login from "./components/login/Login";
 import Chat from "./components/chats/Chat";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import Layout from "./components/common/Layout";
+import Main from "./components/main/Main";
 import { AuthProvider } from "./contexts/AuthContext";
 const router = createBrowserRouter([
   { path: "/", element: <Index /> },
@@ -19,10 +20,10 @@ const router = createBrowserRouter([
         children: [
           {
             path: "",
-            element: <div>Welcome 2 the app this is a placeholder</div>,
+            element: <Main />,
           },
           { path: "chat", element: <Chat /> },
-          { path: "chat/sessionId", element: <Chat /> },
+          { path: "chat/:sessionId", element: <Chat /> },
         ],
       },
     ],

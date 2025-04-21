@@ -3,6 +3,7 @@ from app.models.component_generation import ComponentRequest, UserMessage, Compo
 from uuid import uuid4
 from app.agent.ui_alchemy import initialize_ui_alchemy
 from app.agent.state import process_user_input
+from app.dependencies.auth import get_uid
 router=APIRouter(prefix="/ui-alchemy/api/sessions")
 
 def get_ui_alchemy()->tuple:
@@ -13,7 +14,7 @@ def get_ui_alchemy()->tuple:
     return graph, checkpointer
 
 @router.post("/", response_model=ComponentResponse)
-def create_new_session(request: ComponentRequest, ui_alchemy:tuple=Depends(get_ui_alchemy)):
+def create_new_session(request: ComponentRequest, ui_alchemy:tuple=Depends(get_ui_alchemy), uid:str=Depends(get_uid)):
     """
     Start a new component generation session
     """
@@ -32,7 +33,7 @@ def create_new_session(request: ComponentRequest, ui_alchemy:tuple=Depends(get_u
             "status": "",
             "ai_message": ""
         }
-        config={"configurable":{"thread_id":session_id}}
+        config={"configurable":{"thread_id":session_id, "uid":uid}}
         result=graph.invoke(initial_state, config)
         print(result)
         return ComponentResponse(
@@ -69,3 +70,5 @@ def add_message(session_id:str, message:UserMessage, ui_alchemy:tuple=Depends(ge
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# TODO: Add route to get user sessions
