@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from app.routes import sessions
 from contextlib import asynccontextmanager
 from app.db.database_client import DatabaseClient
+from app.config.firebase_config import FirebaseConfig
 
 
 
@@ -13,8 +14,16 @@ async def lifespan(app: FastAPI):
     """
     Lifespan context manager for FastAPI.
     """
+    # Initialize UI Alchemy
+
     db_client_instance = DatabaseClient.get_instance()
+    firebase_app_instance = FirebaseConfig.get_instance()
+
+    # Connections
+    firebase_app_instance.initialize_firebase_app()
     db_client_instance.connect()
+    from app.agent.ui_alchemy import initialize_ui_alchemy
+    initialize_ui_alchemy()
     yield
     db_client_instance.close()
 

@@ -1,7 +1,8 @@
 # RUN WITH  python -m app.agent.ui_alchemy
 from langgraph.graph import StateGraph, END, START
 from langchain_openai import AzureChatOpenAI
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from app.utils.logger import logger
+from langchain_core.messages import HumanMessage, SystemMessage
 from app.utils.file_utils import load_file
 from langgraph.checkpoint.mongodb import MongoDBSaver
 from app.agent.config import (
@@ -13,25 +14,46 @@ from app.agent.tools import ui_gen_function
 from app.agent.state import State
 from app.db.database_client import DatabaseClient
 
-db_client_instance=DatabaseClient.get_instance()
-client = db_client_instance.client
-db = db_client_instance.db
-print(f"Initializing LLM with endpoint: {AZURE_OPENAI_ENDPOINT}")
-llm = AzureChatOpenAI(
-    api_key=AZURE_OPENAI_API_KEY,
-    azure_endpoint=AZURE_OPENAI_ENDPOINT,
-    api_version="2025-01-01-preview",
-    temperature=0.5,
-)
-code_review_llm = AzureChatOpenAI(
-    api_key=AZURE_OPENAI_API_KEY,
-    azure_endpoint=AZURE_OPENAI_ENDPOINT,
-    api_version="2025-01-01-preview",
-    temperature=0,
-)
-checkpointer = MongoDBSaver(
-    client=client, db_name=db.name, checkpoint_collection_name="sessions",
-)
+
+# Global variables 
+graph = None
+checkpointer = None
+llm = None
+code_review_llm = None
+_initialized = False
+
+
+def initialize_ui_alchemy():
+    """
+    Initialize the UI Alchemy agent with the necessary configurations.
+    This function should be called once at the start of the application.
+    """
+    global graph, checkpointer, llm, code_review_llm, _initialized
+    if _initialized:
+        return graph, checkpointer
+    print("🦊🔃 Initializing UI Alchemy & Alloy the agent... 🦊🔃")
+    # Load environment variables and initialize database client
+    db_client_instance=DatabaseClient.get_instance()
+    client = db_client_instance.client
+    db = db_client_instance.db
+    llm = AzureChatOpenAI(
+        api_key=AZURE_OPENAI_API_KEY,
+        azure_endpoint=AZURE_OPENAI_ENDPOINT,
+        api_version="2025-01-01-preview",
+        temperature=0.5,
+    )
+    code_review_llm = AzureChatOpenAI(
+        api_key=AZURE_OPENAI_API_KEY,
+        azure_endpoint=AZURE_OPENAI_ENDPOINT,
+        api_version="2025-01-01-preview",
+        temperature=0,
+    )
+    checkpointer = MongoDBSaver(
+        client=client, db_name=db.name, checkpoint_collection_name="sessions",
+    )
+    _initialized = True
+    logger.info("🔮🦊 Alloy & UI Alchemy initialized successfully 🦊🔮")
+    return graph, checkpointer
 
 
 def prune_conversation_history(state: State):
@@ -40,7 +62,7 @@ def prune_conversation_history(state: State):
     """
     # Get the existing conversation history
     existing_history = state.get("conversation_history", [])
-    # Keep only the last 3 exchanges
+    # Keep only the last 5 exchanges
     if len(existing_history) <= 5:
         return {}
     return {

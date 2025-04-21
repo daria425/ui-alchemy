@@ -1,16 +1,23 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from app.models.component_generation import ComponentRequest, UserMessage, ComponentResponse
 from uuid import uuid4
-from app.agent.ui_alchemy import graph, checkpointer
+from app.agent.ui_alchemy import initialize_ui_alchemy
 from app.agent.state import process_user_input
 router=APIRouter(prefix="/ui-alchemy/api/sessions")
 
+def get_ui_alchemy()->tuple:
+    """
+    Dependency to get the UI Alchemy instance
+    """
+    graph, checkpointer=initialize_ui_alchemy()
+    return graph, checkpointer
 
 @router.post("/", response_model=ComponentResponse)
-def create_new_session(request: ComponentRequest):
+def create_new_session(request: ComponentRequest, ui_alchemy:tuple=Depends(get_ui_alchemy)):
     """
     Start a new component generation session
     """
+    graph=ui_alchemy[0]
     try:
         session_id = str(uuid4())
         initial_state = {
@@ -39,10 +46,11 @@ def create_new_session(request: ComponentRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{session_id}/messages")
-def add_message(session_id:str, message:UserMessage):
+def add_message(session_id:str, message:UserMessage, ui_alchemy:tuple=Depends(get_ui_alchemy)):
     """
     Continue an existing session with an additional message
     """
+    graph, checkpointer=ui_alchemy
     try:
         config={"configurable":{"thread_id":session_id}}
         if not checkpointer.get(config):
