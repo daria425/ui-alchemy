@@ -28,3 +28,10 @@ class DatabaseClient:
         except Exception as e:
             logger.error(f"😵 Error connecting to MongoDB: {e} 😵")
             raise
+
+    def close(self):
+        if self.client:
+            self.client.close()
+            logger.info("🚪 MongoDB connection closed 🚪")
+        else:
+            logger.warning("⚠️ No MongoDB connection to close ⚠️")
