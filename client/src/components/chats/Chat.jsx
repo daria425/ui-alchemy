@@ -3,16 +3,47 @@ import { AIMessage } from "../common/Messages";
 import { IconButton } from "@radix-ui/themes";
 import { PaperPlaneIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
+import { useParams, useNavigate } from "react-router";
+import { apiConfig } from "../../config/api.config";
 export default function Chat() {
+  const { sessionId } = useParams();
+  const nav = useNavigate();
   const textSize = 4;
   const [componentRequest, setComponentRequest] = useState("");
+  const [fetchError, setFetchError] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [apiResponse, setApiResponse] = useState(null);
   const handleInput = (e) => {
     setComponentRequest(e.target.value);
   };
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(componentRequest);
-    setComponentRequest("");
+    if (!componentRequest.trim()) {
+      return;
+    }
+    setLoading(true);
+    setFetchError(false);
+    try {
+      const response = await apiConfig.post("ui-alchemy/api/sessions", {
+        description: componentRequest,
+      });
+      setApiResponse(response.data);
+      console.log("Response data:", response.data);
+      setComponentRequest("");
+      nav(`/chat/${response.data.session_id}`);
+    } catch (error) {
+      console.error("Error submitting request:", error);
+      setFetchError(true);
+      if (error.response) {
+        console.error("Server error:", error.response.data);
+      } else if (error.request) {
+        console.error("Network error - no response received");
+      } else {
+        console.error("Error setting up request:", error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <div>

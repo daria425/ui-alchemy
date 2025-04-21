@@ -1,5 +1,5 @@
 install:
-    pip install -r requirements.txt
+	pip install -r requirements.txt
 
 run:
-    uvicorn app.main:app --reload
+	uvicorn app.main:app --reload
