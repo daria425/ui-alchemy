@@ -3,6 +3,6 @@ import { useEffect } from "react";
 export default function Index() {
   const nav = useNavigate();
   useEffect(() => {
-    nav("/chat");
+    nav("/login");
   });
 }

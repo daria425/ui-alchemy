@@ -31,7 +31,7 @@ const AuthProvider = ({ children }) => {
     const idToken = await user.getIdToken(true);
     try {
       const response = await apiConfig.post(
-        "auth/login",
+        "ui-alchemy/api/auth/login",
         {},
         {
           headers: {

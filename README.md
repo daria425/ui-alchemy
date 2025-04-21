@@ -20,16 +20,45 @@ This project uses LangGraph to orchestrate component generation and FastAPI to e
 
 ## Project Structure
 
--`/api`:
+## Project Structure
 
-- `/app`: Main backend application code
-  - `/agent`: Contains the LangGraph workflow and state management
-    - `ui_alchemy.py`: Core LangGraph workflow
-    - `state.py`: State definitions and management
-    - `tools.py`: Tool implementations for component generation
-    - `config.py`: Configuration settings
-  - `/utils`: Utility functions for file handling and logging
-- `/main.py`: Application entry point
+- `/api`: Backend API
+  - `/app`: Main application code
+    - `/agent`: LangGraph workflow and state management
+      - `ui_alchemy.py`: Core LangGraph workflow
+      - `state.py`: State definitions and management
+      - `tools.py`: Tool implementations for component generation
+      - `config.py`: Agent configuration settings
+    - `/config`: Application configuration
+      - `firebase_config.py`: Firebase integration settings
+      - `firebase_key.json`: Firebase credentials (git-ignored)
+    - `/db`: Database related code
+      - `database_client.py`: MongoDB connection management
+      - `database_services.py`: Collection-specific database services
+      - `database_service_provider.py`: Service providers for dependency injection
+    - `/models`: Data models and schemas
+      - `component_generation.py`: Component generation request/response models
+      - `auth.py`: Authentication-related models
+    - `/routes`: API endpoints
+      - `sessions.py`: Component generation session management
+      - `auth.py`: Authentication endpoints
+    - `/utils`: Utility functions
+      - `logger.py`: Logging configuration
+      - `file_utils.py`: File handling utilities
+      - `auth_utils.py`: Authentication utilities
+    - `/dependencies`: FastAPI dependencies
+    - `main.py`: Application entry point and lifecycle management
+  - `requirements.txt`: Python dependencies
+- `/client`: Frontend React application
+  - `/src`: Source code
+    - `/components`: React components
+      - `/common`: Common components and layout
+      - `/chats`: Chat interface components
+      - `/login`: Authentication components
+    - `/contexts`: React context providers
+      - `AuthContext.jsx`: Authentication state management
+    - `/config`: Frontend configuration
+  - `package.json`: JavaScript dependencies
 
 ## API Endpoints
 

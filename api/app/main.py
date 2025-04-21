@@ -1,7 +1,7 @@
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
-from app.routes import sessions
+from app.routes import sessions, auth
 from contextlib import asynccontextmanager
 from app.db.database_client import DatabaseClient
 from app.config.firebase_config import FirebaseConfig
@@ -40,3 +40,4 @@ app.add_middleware(
 )
 
 app.include_router(sessions.router)
+app.include_router(auth.router)

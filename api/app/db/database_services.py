@@ -64,12 +64,15 @@ class UserDatabaseService(BaseDatabaseService):
 
     def login_user(self, user_data:dict):
         uid=user_data["uid"]
-        existing_user=self.find_user_by_uid(self,uid)
+        existing_user=self.find_user_by_uid(uid)
         if existing_user:
                 logger.info(f"Found existing user, returning data for {existing_user['uid']}")
+                if "_id" in existing_user:
+                    existing_user["_id"]=str(existing_user["_id"])
                 return existing_user
         inserted_doc=self.insert_one(user_data)
         logger.info(f"Successfully inserted user {inserted_doc.inserted_id}")
+        print(f"Inserted user data: {user_data}")
         if "_id" in user_data:
-            user_data["id"]=str(user_data["_id"])
+            user_data["_id"]=str(user_data["_id"])
         return user_data
