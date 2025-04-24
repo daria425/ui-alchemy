@@ -17,4 +17,4 @@ class ComponentResponse(BaseModel):
     message: str
     requires_input: bool = False
     component_data: Optional[Dict[str, str]] = None
-    conversation_history:List[MessageItem] = []
+    messages: Optional[List[MessageItem]] = None

@@ -43,6 +43,12 @@ export default function Chat() {
   const nav = useNavigate();
   const textSize = 4;
   const [userInput, setUserInput] = useState("");
+  const [conversationMessages, setConversationMessages] = useState([
+    {
+      "role": "ai",
+      "content": "Welcome to UI Alchemy! How can I assist you today?",
+    },
+  ]);
   const [fetchError, setFetchError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [apiResponse, setApiResponse] = useState(null);
@@ -56,6 +62,8 @@ export default function Chat() {
     if (!userInput.trim()) {
       return;
     }
+    const userMessage = { role: "user", content: userInput };
+    setConversationMessages((prev) => [...prev, userMessage]);
     setLoading(true);
     setFetchError(false);
     try {
@@ -73,6 +81,9 @@ export default function Chat() {
             },
           }
         );
+        if (response.data.messages && response.data.messages.length > 0) {
+          setConversationMessages(response.data.messages);
+        }
       } else {
         response = await apiConfig.post(
           `ui-alchemy/api/sessions/${sessionId}/messages`,
@@ -85,10 +96,18 @@ export default function Chat() {
             },
           }
         );
+        if (response.data.messages && response.data.messages.length > 0) {
+          // Append only the AI message since we already added the user message
+          const aiMessage = response.data.messages.find(
+            (msg) => msg.role === "assistant"
+          );
+          if (aiMessage) {
+            setConversationMessages((prev) => [...prev, aiMessage]);
+          }
+        }
       }
       setApiResponse(response.data);
       console.log("Response data:", response.data);
-      setUserInput("");
       nav(`/app/chat/${response.data.session_id}`);
     } catch (error) {
       console.error("Error submitting request:", error);
@@ -106,21 +125,25 @@ export default function Chat() {
   };
   return (
     <div>
-      <AIMessage>
-        <Text size={textSize} as="p">
-          Welcome to UI Alchemy.{" "}
-          <Text size={textSize} weight={"bold"}>
-            I’m Alloy.
-          </Text>
-        </Text>
-        <Text size={textSize} as="p">
-          Your AI partner in crafting beautiful React components.
-        </Text>
-        <Text size={textSize} as="p">
-          What shall we build today?
-        </Text>
-      </AIMessage>
-
+      {conversationMessages.map((msg, idx) => {
+        if (msg.role === "user") {
+          return (
+            <div key={idx}>
+              <Text size={textSize} weight="bold">
+                {msg.content}
+              </Text>
+            </div>
+          );
+        } else {
+          return (
+            <div key={idx}>
+              <AIMessage>
+                <Text size={textSize}>{msg.content}</Text>
+              </AIMessage>
+            </div>
+          );
+        }
+      })}
       <form onSubmit={handleSubmit}>
         <Box position={"relative"}>
           <IconButton
