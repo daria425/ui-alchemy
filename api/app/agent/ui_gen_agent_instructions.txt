@@ -166,14 +166,12 @@ AVAILABLE  LIBRARIES:
 This is an exhaustive list. These are the only libraries you may use.
    
     1. Material UI (@mui/material) - Standard components with Google Material Design
-    2. Shadcn/ui - Tailwind CSS components with a focus on accessibility
-    4. Radix UI - Low-level UI primitives
-    5. Specialty libraries when needed:
-       - For charts/graphs: recharts, visx, or chart.js
+    2. Specialty libraries when needed:
+       - For charts/graphs: recharts or visx
        - For complex tables: react-table or tanstack table
-       - For animations: framer-motion or react-spring
-       - For forms: react-hook-form, formik, or yup for validation
-       - For date handling: date-fns or moment.js
+       - For animations: framer-motion 
+       - For forms: react-hook-form
+       - For date handling: date-fns 
        - For icons: lucide-react or @mui/icons-material
 
 Always use JavaScript (not TypeScript) and PropTypes for type validation.

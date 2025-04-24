@@ -5,6 +5,39 @@ import { PaperPlaneIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router";
 import { apiConfig } from "../../config/api.config";
+const testCode = `
+import React from 'react';
+const RequestedComponent = () => {
+  const buttonStyle = {
+    background: 'linear-gradient(to right, #ff7e5f, #feb47b)', // Sunset gradient
+    border: 'none',
+    borderRadius: '12px',
+    color: 'white',
+    padding: '10px 20px',
+    fontSize: '16px',
+    cursor: 'pointer',
+    transition: 'transform 0.2s ease-in-out',
+  };
+
+  const hoverStyle = {
+    transform: 'scale(1.1)',
+  };
+
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  return (
+    <button
+      style={{ ...buttonStyle, ...(isHovered ? hoverStyle : {}) }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      Button
+    </button>
+  );
+};
+
+export default RequestedComponent;
+`;
 export default function Chat() {
   const { sessionId } = useParams();
   const nav = useNavigate();
@@ -87,6 +120,7 @@ export default function Chat() {
           What shall we build today?
         </Text>
       </AIMessage>
+
       <form onSubmit={handleSubmit}>
         <Box position={"relative"}>
           <IconButton

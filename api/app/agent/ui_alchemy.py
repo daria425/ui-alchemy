@@ -89,17 +89,17 @@ def select_libraries(state: State):
 Act as a UI designer and experienced Frontend developer. Based on this UI component description {state['component_request']}
 And follow-up context:\n{context}"
     Determine the most appropriate React library/libraries to implement this component.
+    Do not assume libraries are necessary.
+    If the component is simple, you can use standard HTML/CSS and conscicely explain the usage.
     Consider these options and combinations. These are the only libraries you can use:
    
     1. Material UI (@mui/material) - Standard components with Google Material Design
-    2. Shadcn/ui - Tailwind CSS components with a focus on accessibility
-    3. Radix UI - Low-level UI primitives
-    4. Specialty libraries when needed:
-       - For charts/graphs: recharts, visx, or chart.js
+    2. Specialty libraries when needed:
+       - For charts/graphs: recharts or visx
        - For complex tables: react-table or tanstack table
-       - For animations: framer-motion or react-spring
-       - For forms: react-hook-form, formik, or yup for validation
-       - For date handling: date-fns or moment.js
+       - For animations: framer-motion 
+       - For forms: react-hook-form
+       - For date handling: date-fns 
        - For icons: lucide-react or @mui/icons-material
 
     Keep your analysis focused on the component's requirements and the libraries' capabilities.

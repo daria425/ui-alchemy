@@ -61,9 +61,11 @@ def create_new_session(request: ComponentRequest, ui_alchemy:tuple=Depends(get_u
             status=result["status"],
             message=result["ai_message"],
             component_data=result.get("component_data", None),
-            requires_input=result.get("status")=="awaiting_user_input"
+            requires_input=result.get("status")=="awaiting_user_input",
+            conversation_history=result.get("conversation_history", []),
             )
     except Exception as e:
+        logger.error(f"❌ Error creating new session: {e} ❌")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{session_id}/messages")
@@ -87,6 +89,7 @@ def add_message(session_id:str, message:UserMessage, ui_alchemy:tuple=Depends(ge
             message=result["ai_message"],
         requires_input=result.get("status")=="awaiting_user_input",
             component_data=None if result.get("status")=="awaiting_user_input" else result.get("component_data", None),
+            conversation_history=result.get("conversation_history", []),
         )
     except Exception as e:
         logger.error(f"❌ Error adding message: {e} ❌")
