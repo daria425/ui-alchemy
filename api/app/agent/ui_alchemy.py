@@ -240,11 +240,17 @@ Act as a UI designer. Ask a series of follow up questions to gather more informa
 """
     messages = [SystemMessage(content=system_prompt), HumanMessage(content=prompt)]
     response = llm.invoke(messages)
+    chat_messages = state.get("chat_messages", [])
     clarification_questions = response.content
+    chat_messages.append({
+        "role": "assistant",
+        "content": clarification_questions,
+    })
     return {
         "ai_message": clarification_questions,
         "status": "awaiting_user_input",
         "component_data": {},
+        "chat_messages": chat_messages,
     }
 
 
@@ -263,6 +269,12 @@ def get_final_response(state: State):
     component_data = state.get("component_data", {})
     validation_feedback = state.get("validation_feedback", "")
     ui_guidance = state.get("ui_guidance", "")
+    final_message = "Component generated successfully!" if state.get("status") != "validation_failure" else "I couldn't create a component that passed validation after multiple attempts. Here's my best attempt with known issues."
+    chat_messages = state.get("chat_messages", [])
+    chat_messages.append({
+        "role": "assistant",
+        "content": final_message
+    })
     print("\n--- Generated Component ---")
     if component_data:
         print(f"Description: {component_data.get('description', '')}")
@@ -284,12 +296,14 @@ def get_final_response(state: State):
             "status": "validation_failure",
             "ai_message": "I couldn't create a component that passed validation after multiple attempts. Here's my best attempt with known issues.",
             "component_data": component_data,
+            "chat_messages": chat_messages,
         }
     else:
         return {
             "status": "success",
             "ai_message": "Component generated successfully!",
             "component_data": component_data,
+            "chat_messages": chat_messages,
         }
 
 

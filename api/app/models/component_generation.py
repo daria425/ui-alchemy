@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Dict, Optional, List
 
 class ComponentRequest(BaseModel):
@@ -10,6 +10,8 @@ class UserMessage(BaseModel):
 class MessageItem(BaseModel):
     role: str
     content: str
+    model_config=ConfigDict(extra="allow")
+
 
 class ComponentResponse(BaseModel):
     session_id: str

@@ -64,6 +64,7 @@ export default function Chat() {
     }
     const userMessage = { role: "user", content: userInput };
     setConversationMessages((prev) => [...prev, userMessage]);
+    setUserInput("");
     setLoading(true);
     setFetchError(false);
     try {
@@ -98,11 +99,12 @@ export default function Chat() {
         );
         if (response.data.messages && response.data.messages.length > 0) {
           // Append only the AI message since we already added the user message
-          const aiMessage = response.data.messages.find(
+          const aiMessage = response.data.messages.filter(
             (msg) => msg.role === "assistant"
           );
-          if (aiMessage) {
-            setConversationMessages((prev) => [...prev, aiMessage]);
+          const lastAiMessage = aiMessage[aiMessage.length - 1];
+          if (lastAiMessage) {
+            setConversationMessages((prev) => [...prev, lastAiMessage]);
           }
         }
       }

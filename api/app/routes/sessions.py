@@ -46,6 +46,9 @@ def create_new_session(request: ComponentRequest, ui_alchemy:tuple=Depends(get_u
             "valid_request": "",
             "ui_guidance":"",
             "conversation_history": [],
+            "chat_messages":[
+                {"role": "user", "content": request.description},
+            ],
             "user_input": "",
             "force_generate": False,
             "validation_feedback": "",
@@ -56,17 +59,13 @@ def create_new_session(request: ComponentRequest, ui_alchemy:tuple=Depends(get_u
         config={"configurable":{"thread_id":session_id, "uid":uid}, "metadata":metadata}
         result=graph.invoke(initial_state, config)
         print(result)
-        messages=[
-            {"role": "user", "content": request.description},
-            {"role": "assistant", "content": result["ai_message"]}
-        ]
         return ComponentResponse(
             session_id=session_id, # returned to client, used in next request
             status=result["status"],
             message=result["ai_message"],
             component_data=result.get("component_data", None),
             requires_input=result.get("status")=="awaiting_user_input",
-            messages=messages,
+            messages=result.get("chat_messages", []),
             )
     except Exception as e:
         logger.error(f"❌ Error creating new session: {e} ❌")
@@ -87,17 +86,13 @@ def add_message(session_id:str, message:UserMessage, ui_alchemy:tuple=Depends(ge
         updated_state=process_user_input(current_state, message.message)
         result=graph.invoke(updated_state, config)
         session_collection.update_session_metadata(session_id)
-        messages=[
-            {"role": "user", "content": message.message},
-            {"role": "assistant", "content": result["ai_message"]}
-        ]
         return ComponentResponse(
             session_id=session_id, # returned to client, used in next request
             status=result["status"],
             message=result["ai_message"],
         requires_input=result.get("status")=="awaiting_user_input",
             component_data=None if result.get("status")=="awaiting_user_input" else result.get("component_data", None),
-            messages=messages,
+            messages=result.get("chat_messages", []),
         )
     except Exception as e:
         logger.error(f"❌ Error adding message: {e} ❌")

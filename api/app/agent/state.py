@@ -26,6 +26,7 @@ class State(TypedDict):
     validation_attempts: int
     status: str
     ai_message: str
+    chat_messages: list[dict[str, str]]  # list of dicts with keys 'role' and 'content'
     
 def process_user_input(state: dict, user_message: str):
     """
@@ -34,9 +35,12 @@ def process_user_input(state: dict, user_message: str):
     component_request = state.get("component_request", "")
     ai_message = state.get("ai_message", "")
     conversation_history = state.get("conversation_history", [])
+    chat_messages = state.get("chat_messages", [])
+    print("current chat messages", chat_messages)
     conversation_history.append(
         [AIMessage(content=ai_message), HumanMessage(content=user_message)]
     )
+    chat_messages.append({"role": "user", "content": user_message})
     
     # Check if user wants to force generate
     force_generate = user_message.lower() == "generate"
@@ -48,6 +52,7 @@ def process_user_input(state: dict, user_message: str):
         
     return {
         "conversation_history": conversation_history,
+        "chat_messages": chat_messages,
         "user_input": user_message,
         "component_request": updated_request,
         "force_generate": force_generate,
