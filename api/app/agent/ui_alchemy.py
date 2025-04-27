@@ -86,9 +86,9 @@ def select_libraries(state: State):
             ai_msg, human_msg = exchange
             context += f"Question: {ai_msg.content}\nAnswer: {human_msg.content}\n\n"
     system_prompt = f"""
-Act as a UI designer and experienced Frontend developer. Based on this UI component description {state['component_request']}
+Act as a UI designer and experienced Frontend developer. Based on this UI description {state['component_request']}
 And follow-up context:\n{context}"
-    Determine the most appropriate React library/libraries to implement this component.
+    Determine the most appropriate React library/libraries to implement this user interface.
     Do not assume libraries are necessary.
     If the component is simple, you can use standard HTML/CSS and conscicely explain the usage.
     Consider these options and combinations. These are the only libraries you can use:
@@ -204,8 +204,8 @@ Ensure that:
 1. It is syntactically correct and adheres to best practices.
 2. It is well-structured and easy to read.
 3.It includes a default export called RequestedComponent.
-4. The component within the code is fully self contained, can be rendered alone and does not rely on any external variables or data.
-5. The component fits the following request: {state['component_request']}
+4. The main component within the code is fully self contained, can be rendered alone and does not rely on any external variables or data.
+5. The code fits the following request: {state['component_request']}
 If the code meets all the above criteria, respond with "yes" only. Only mention the word "yes" if the code is correct and meets all the requirements.
 If it does not, respond with "no" and provide a brief explanation of the issues, clearly explaining how to fix.
 The user relies on you mentioning these words so it is CRITICAL that you only say 'yes' if the code is correct and meets all the requirements and 'no'if it does not.

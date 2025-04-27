@@ -103,6 +103,17 @@ class UserDatabaseService(BaseDatabaseService):
 class SessionDatabaseService(BaseDatabaseService):
     def __init__(self):
         super().__init__("sessions")
+
+    def find_session_by_id(self, session_id: str):
+        """
+        Find session by session_id
+        """
+        try:
+            result=self.collection.find_one({"thread_id": session_id}, {"_id":0})
+            return result
+        except Exception as e:
+            logger.error(f"❌ Error finding session by id: {e} ❌")
+            raise
     
     def update_session_metadata(self, session_id: str):
         """

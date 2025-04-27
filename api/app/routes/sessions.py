@@ -27,6 +27,34 @@ def get_user_sessions(uid:str=Depends(get_uid), session_collection:SessionDataba
         return sessions
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/{session_id}")
+def get_session(session_id:str, session_collection:SessionDatabaseService=Depends(get_session_collection), ui_alchemy:tuple=Depends(get_ui_alchemy), response_model=ComponentResponse):
+    """
+    Get a specific session by session_id
+    """
+    try:
+        checkpointer=ui_alchemy[1]
+        session=session_collection.find_session_by_id(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        config={
+            "configurable":{"thread_id":session_id}
+        }
+        saved_config=checkpointer.get(config)
+        current_state=saved_config["channel_values"]
+
+        return ComponentResponse(
+            session_id=session_id,
+            status=current_state["status"],
+            message=current_state["ai_message"],
+            component_data=current_state.get("component_data", None),
+            requires_input=current_state.get("status")=="awaiting_user_input",
+            messages=current_state.get("chat_messages", []),
+        )
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=str(e))
 @router.post("/", response_model=ComponentResponse)
 def create_new_session(request: ComponentRequest, ui_alchemy:tuple=Depends(get_ui_alchemy), uid:str=Depends(get_uid)):
     """

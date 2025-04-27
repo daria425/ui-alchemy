@@ -95,6 +95,7 @@ export default App;`,
             "@emotion/react": "^11.11.1",
             "@emotion/styled": "^11.11.0",
             "framer-motion": "^10.16.5",
+            "lucide-react": "^0.503.0",
           },
         };
 

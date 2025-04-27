@@ -3,3 +3,7 @@
   --sky-9: var(--ui-alchemy-color);
   --sky-a9: var(--ui-alchemy-color);
 }
+
+body {
+  margin: 0;
+}

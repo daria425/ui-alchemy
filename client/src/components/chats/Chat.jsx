@@ -1,54 +1,18 @@
-import { Text, TextArea, Box } from "@radix-ui/themes";
-import { AIMessage } from "../common/Messages";
+import { Text, TextArea, Box, ScrollArea } from "@radix-ui/themes";
+import { AIMessage, UserMessage } from "../common/Messages";
 import { IconButton } from "@radix-ui/themes";
 import { PaperPlaneIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router";
 import { apiConfig } from "../../config/api.config";
-const testCode = `
-import React from 'react';
-const RequestedComponent = () => {
-  const buttonStyle = {
-    background: 'linear-gradient(to right, #ff7e5f, #feb47b)', // Sunset gradient
-    border: 'none',
-    borderRadius: '12px',
-    color: 'white',
-    padding: '10px 20px',
-    fontSize: '16px',
-    cursor: 'pointer',
-    transition: 'transform 0.2s ease-in-out',
-  };
-
-  const hoverStyle = {
-    transform: 'scale(1.1)',
-  };
-
-  const [isHovered, setIsHovered] = React.useState(false);
-
-  return (
-    <button
-      style={{ ...buttonStyle, ...(isHovered ? hoverStyle : {}) }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      Button
-    </button>
-  );
-};
-
-export default RequestedComponent;
-`;
+import { mockMessages } from "../../mocks/mockMessages";
 export default function Chat() {
   const { sessionId } = useParams();
   const nav = useNavigate();
   const textSize = 4;
   const [userInput, setUserInput] = useState("");
-  const [conversationMessages, setConversationMessages] = useState([
-    {
-      "role": "ai",
-      "content": "Welcome to UI Alchemy! How can I assist you today?",
-    },
-  ]);
+  const [conversationMessages, setConversationMessages] =
+    useState(mockMessages);
   const [fetchError, setFetchError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [apiResponse, setApiResponse] = useState(null);
@@ -127,25 +91,28 @@ export default function Chat() {
   };
   return (
     <div>
-      {conversationMessages.map((msg, idx) => {
-        if (msg.role === "user") {
-          return (
-            <div key={idx}>
-              <Text size={textSize} weight="bold">
-                {msg.content}
-              </Text>
-            </div>
-          );
-        } else {
-          return (
-            <div key={idx}>
-              <AIMessage>
+      <ScrollArea
+        style={{ height: "calc(100vh - 200px)" }}
+        scrollbars="vertical"
+      >
+        {conversationMessages.map((msg, idx) => {
+          if (msg.role === "user") {
+            return (
+              <UserMessage key={idx}>
                 <Text size={textSize}>{msg.content}</Text>
-              </AIMessage>
-            </div>
-          );
-        }
-      })}
+              </UserMessage>
+            );
+          } else {
+            return (
+              <div key={idx}>
+                <AIMessage>
+                  <Text size={textSize}>{msg.content}</Text>
+                </AIMessage>
+              </div>
+            );
+          }
+        })}
+      </ScrollArea>
       <form onSubmit={handleSubmit}>
         <Box position={"relative"}>
           <IconButton
